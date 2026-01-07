@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LayoutTemplate, getTemplates, saveTemplate, applyTemplate, deleteTemplate } from "@/lib/supabase/template-queries";
+import { LayoutTemplate, getTemplates, saveTemplate, deleteTemplate } from "@/lib/supabase/template-queries";
 import { Loader2, Plus, Save, Trash2, CheckCircle2, Layout, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
