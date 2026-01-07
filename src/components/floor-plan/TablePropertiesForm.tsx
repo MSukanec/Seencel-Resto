@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FloorObject, TableShape, SeatConfig, ChairType } from "./Canvas";
-import { Ruler, RotateCcw, Square, Circle, RectangleHorizontal } from "lucide-react";
+import { Ruler, RotateCcw, Square, Circle, RectangleHorizontal, Utensils } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TablePropertiesFormProps {
@@ -160,103 +160,62 @@ export function TablePropertiesForm({ object, onChange, label }: TableProperties
                 <label className="text-sm font-medium text-foreground">Configuración de Asientos</label>
 
                 {/* Visual Diagram */}
-                <div className="relative flex items-center justify-center p-8 bg-accent/20 rounded-lg">
-                    <div className="relative w-32 h-32 bg-primary/10 border-2 border-primary rounded-md"></div>
-
-                    {/* Top */}
-                    <div className="absolute top-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1">
-                        <label className="flex items-center gap-2 text-xs">
-                            <input
-                                type="checkbox"
-                                checked={seating.top?.enabled}
-                                onChange={(e) => handleSeatingChange("top", { enabled: e.target.checked })}
-                                className="rounded"
-                            />
-                            Arriba
-                        </label>
-                        {seating.top?.enabled && (
-                            <select
-                                value={seating.top?.type}
-                                onChange={(e) => handleSeatingChange("top", { type: e.target.value as ChairType })}
-                                className="text-xs bg-background border rounded px-1 py-0.5"
-                            >
-                                <option value="chair">Silla</option>
-                                <option value="wheelchair">Silla de ruedas</option>
-                                <option value="child">Silla de niños</option>
-                            </select>
-                        )}
+                {/* Visual Diagram */}
+                {/* Visual Diagram - 3x3 Grid for perfect alignment */}
+                <div className="grid grid-cols-3 grid-rows-3 gap-2 items-center justify-items-center p-4 bg-accent/20 rounded-lg w-fit mx-auto">
+                    {/* Top Row */}
+                    <div className="col-start-2 row-start-1">
+                        <input
+                            type="checkbox"
+                            checked={seating.top?.enabled}
+                            onChange={(e) => handleSeatingChange("top", { enabled: e.target.checked })}
+                            className="rounded cursor-pointer w-4 h-4"
+                            title="Arriba"
+                        />
                     </div>
 
-                    {/* Right */}
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1">
-                        <label className="flex items-center gap-2 text-xs">
-                            <input
-                                type="checkbox"
-                                checked={seating.right?.enabled}
-                                onChange={(e) => handleSeatingChange("right", { enabled: e.target.checked })}
-                                className="rounded"
-                            />
-                            Derecha
-                        </label>
-                        {seating.right?.enabled && (
-                            <select
-                                value={seating.right?.type}
-                                onChange={(e) => handleSeatingChange("right", { type: e.target.value as ChairType })}
-                                className="text-xs bg-background border rounded px-1 py-0.5"
-                            >
-                                <option value="chair">Silla</option>
-                                <option value="wheelchair">Silla de ruedas</option>
-                                <option value="child">Silla de niños</option>
-                            </select>
-                        )}
+                    {/* Middle Row: Left, Table, Right */}
+                    <div className="col-start-1 row-start-2">
+                        <input
+                            type="checkbox"
+                            checked={seating.left?.enabled}
+                            onChange={(e) => handleSeatingChange("left", { enabled: e.target.checked })}
+                            className="rounded cursor-pointer w-4 h-4"
+                            title="Izquierda"
+                        />
                     </div>
 
-                    {/* Bottom */}
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1">
-                        <label className="flex items-center gap-2 text-xs">
-                            <input
-                                type="checkbox"
-                                checked={seating.bottom?.enabled}
-                                onChange={(e) => handleSeatingChange("bottom", { enabled: e.target.checked })}
-                                className="rounded"
-                            />
-                            Abajo
-                        </label>
-                        {seating.bottom?.enabled && (
-                            <select
-                                value={seating.bottom?.type}
-                                onChange={(e) => handleSeatingChange("bottom", { type: e.target.value as ChairType })}
-                                className="text-xs bg-background border rounded px-1 py-0.5"
-                            >
-                                <option value="chair">Silla</option>
-                                <option value="wheelchair">Silla de ruedas</option>
-                                <option value="child">Silla de niños</option>
-                            </select>
-                        )}
+                    <div className="col-start-2 row-start-2">
+                        <div className="relative w-16 h-16 bg-primary/10 border-2 border-primary rounded-md flex flex-col items-center justify-center text-primary">
+                            <span className="text-lg font-bold">
+                                {(seating.top?.enabled ? 1 : 0) +
+                                    (seating.right?.enabled ? 1 : 0) +
+                                    (seating.bottom?.enabled ? 1 : 0) +
+                                    (seating.left?.enabled ? 1 : 0)}
+                            </span>
+                            <Utensils size={14} />
+                        </div>
                     </div>
 
-                    {/* Left */}
-                    <div className="absolute left-2 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1">
-                        <label className="flex items-center gap-2 text-xs">
-                            <input
-                                type="checkbox"
-                                checked={seating.left?.enabled}
-                                onChange={(e) => handleSeatingChange("left", { enabled: e.target.checked })}
-                                className="rounded"
-                            />
-                            Izquierda
-                        </label>
-                        {seating.left?.enabled && (
-                            <select
-                                value={seating.left?.type}
-                                onChange={(e) => handleSeatingChange("left", { type: e.target.value as ChairType })}
-                                className="text-xs bg-background border rounded px-1 py-0.5"
-                            >
-                                <option value="chair">Silla</option>
-                                <option value="wheelchair">Silla de ruedas</option>
-                                <option value="child">Silla de niños</option>
-                            </select>
-                        )}
+                    <div className="col-start-3 row-start-2">
+                        <input
+                            type="checkbox"
+                            checked={seating.right?.enabled}
+                            onChange={(e) => handleSeatingChange("right", { enabled: e.target.checked })}
+                            className="rounded cursor-pointer w-4 h-4"
+                            title="Derecha"
+                        />
+                    </div>
+
+                    {/* Bottom Row */}
+                    <div className="col-start-2 row-start-3">
+                        <input
+                            type="checkbox"
+                            checked={seating.bottom?.enabled}
+                            onChange={(e) => handleSeatingChange("bottom", { enabled: e.target.checked })}
+                            className="rounded cursor-pointer w-4 h-4"
+                            title="Abajo"
+                        />
                     </div>
                 </div>
             </div>
