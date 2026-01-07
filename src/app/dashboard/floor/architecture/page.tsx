@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState, useEffect } from "react";
 import { Canvas, FloorObject, FloorObjectType } from "@/components/floor-plan/Canvas";
 import { snapToGrid } from "@/components/floor-plan/SnapUtils";

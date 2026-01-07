@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState, useEffect } from "react";
 import { Canvas, FloorObject, FloorObjectType } from "@/components/floor-plan/Canvas";
 import { cn } from "@/lib/utils";
@@ -292,7 +294,22 @@ export default function TablesPage() {
                 </div>
 
                 {/* Right Side: Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-4">
+                    {/* Total Capacity Display */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-md border border-border/50 text-sm font-medium text-muted-foreground" title="Capacidad total del salón">
+                        <Utensils size={14} className="text-primary" />
+                        <span>
+                            {objects.reduce((acc, obj) => {
+                                if (obj.type !== 'table' || !obj.seating) return acc;
+                                const seats = (obj.seating.top?.enabled ? 1 : 0) +
+                                    (obj.seating.right?.enabled ? 1 : 0) +
+                                    (obj.seating.bottom?.enabled ? 1 : 0) +
+                                    (obj.seating.left?.enabled ? 1 : 0);
+                                return acc + seats;
+                            }, 0)} cubiertos
+                        </span>
+                    </div>
+
                     {(selectedId || selectedIds.size > 0) && (
                         <button
                             onClick={() => {
