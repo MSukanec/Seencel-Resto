@@ -72,22 +72,24 @@ export default function ArchitecturePage() {
 
         if (data) {
             // Convert DB objects to Canvas objects
-            const canvasObjects: FloorObject[] = data.map(dbObj => ({
-                id: dbObj.id,
-                type: dbTypeToCanvasType(dbObj.type),
-                x: Number(dbObj.x),
-                y: Number(dbObj.y),
-                width: Number(dbObj.width),
-                height: Number(dbObj.height),
-                rotation: Number(dbObj.angle),
-                alignment: dbObj.properties?.alignment,
-                // Door properties
-                doorType: dbObj.properties?.doorType,
-                swingDirection: dbObj.properties?.swingDirection,
-                // New properties
-                attachedWallId: dbObj.properties?.attachedWallId,
-                shape: dbObj.properties?.shape,
-            }));
+            const canvasObjects: FloorObject[] = data
+                .filter(o => ['wall', 'window', 'door', 'pillar'].includes(o.type))
+                .map(dbObj => ({
+                    id: dbObj.id,
+                    type: dbTypeToCanvasType(dbObj.type),
+                    x: Number(dbObj.x),
+                    y: Number(dbObj.y),
+                    width: Number(dbObj.width),
+                    height: Number(dbObj.height),
+                    rotation: Number(dbObj.angle),
+                    alignment: dbObj.properties?.alignment,
+                    // Door properties
+                    doorType: dbObj.properties?.doorType,
+                    swingDirection: dbObj.properties?.swingDirection,
+                    // New properties
+                    attachedWallId: dbObj.properties?.attachedWallId,
+                    shape: dbObj.properties?.shape,
+                }));
 
             setObjects(canvasObjects);
             setHasChanges(false);

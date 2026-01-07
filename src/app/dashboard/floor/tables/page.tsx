@@ -13,11 +13,11 @@ import { BarPropertiesForm } from "@/components/floor-plan/BarPropertiesForm";
 import { LayoutManager } from "@/components/floor-plan/LayoutManager";
 import { FloorSelector } from "@/components/floor-plan/FloorSelector";
 import { useFloor } from "@/contexts/FloorContext";
-import { getTables, bulkSaveTables, generateTableLabel } from "@/lib/supabase/table-queries";
+// import { getTables, bulkSaveTables, generateTableLabel } from "@/lib/supabase/table-queries"; // Deprecated
 import { getFloorObjects } from "@/lib/supabase/floor-object-queries";
 import { createClient } from "@/lib/supabase/client";
 
-import { getTemplates, LayoutTemplate, applyTemplate } from "@/lib/supabase/template-queries";
+import { getTemplates, LayoutTemplate } from "@/lib/supabase/template-queries";
 import { FolderOpen, Layout } from "lucide-react";
 import { TemplateSelector } from "@/components/floor-plan/TemplateSelector";
 
@@ -104,6 +104,13 @@ export default function TablesPage() {
         }
     };
 
+    // Reload tables when template or floor changes
+    useEffect(() => {
+        if (selectedFloorId && activeTemplateId) {
+            loadTables();
+        }
+    }, [activeTemplateId, selectedFloorId]);
+
 
     // ... (logic for handleApplyTemplate)
 
@@ -122,23 +129,35 @@ export default function TablesPage() {
     };
 
     const loadTables = async () => {
-        if (!selectedFloorId) return;
+        if (!selectedFloorId || !activeTemplateId) return; // Need template ID now
         setLoading(true);
-        const { data, error } = await getTables(selectedFloorId);
+
+        // Import getTemplateItems dynamically or use imported
+        const { getTemplateItems } = await import("@/lib/supabase/template-queries");
+        const { data, error } = await getTemplateItems(activeTemplateId, selectedFloorId);
+
         if (data) {
-            // Map DB TableRecord to Canvas FloorObject
-            const canvasObjects: FloorObject[] = data.map(t => ({
-                id: t.id,
-                type: t.label.toLowerCase().includes('barra') ? 'bar' : 'table', // Heuristic for type
-                x: t.x,
-                y: t.y,
-                width: t.width,
-                height: t.height,
-                rotation: t.angle, // Map angle -> rotation
-                label: t.label,
-                shape: t.shape as any,
-                seats: t.seats,
-                // Default seating enabled for all sides to ensure they are visible
+            // Map LayoutTemplateItem to Canvas FloorObject
+            const canvasObjects: FloorObject[] = data.map(item => ({
+                id: item.id,
+                type: 'table', // Items in template are furniture. We can store type later if needed or infer.
+                // Actually layout_template_items doesn't have 'type'? Wait, migrations said columns: label, x, y, width, height, shape, seats, angle. 
+                // We should probably assume they are tables/bars.
+                // Migration script mapped: type IN ('table', 'bar') -> inserted.
+                // We need to store 'type' in 'shape' or add 'type' column to layout_template_items?
+                // The user's schema didn't have 'type'. It had 'shape'.
+                // Let's assume everything is a table for now, or infer from label?
+                // Migration used: COALESCE(properties->>'shape', 'rectangle').
+                // Let's create a heuristic: If no type field, assume table.
+
+                x: Number(item.x),
+                y: Number(item.y),
+                width: Number(item.width),
+                height: Number(item.height),
+                rotation: Number(item.angle),
+                label: item.label,
+                shape: item.shape as any,
+                seats: item.seats,
                 seating: {
                     top: { enabled: true, type: "chair" },
                     right: { enabled: true, type: "chair" },
@@ -178,16 +197,13 @@ export default function TablesPage() {
     };
 
     const handleSave = async () => {
-        if (!selectedFloorId || !restaurantId) return;
+        if (!selectedFloorId || !restaurantId || !activeTemplateId) {
+            if (!activeTemplateId) alert("No hay una plantilla activa. Crea o selecciona una primero.");
+            return;
+        }
         setSaving(true);
 
-        // Map Canvas Objects -> DB Table inserts
-        // We only save Tables and Bars to the 'tables' table for now
-        // Architecture is typically saved in architecture editor, but if we allow moving them here, we should check.
-        // For now, TablesPage mostly edits tables/bars.
-
-        const tablesToSave = objects.map(o => {
-            // Map Canvas shape "rectangular" -> DB "rectangle", "circular" -> "circle"
+        const itemsToSave = objects.map(o => {
             let shape: "square" | "rectangle" | "circle" = "rectangle";
             if (o.shape === "rectangular") shape = "rectangle";
             else if (o.shape === "circular") shape = "circle";
@@ -200,15 +216,18 @@ export default function TablesPage() {
                 width: o.width,
                 height: o.height,
                 shape: shape,
-                seats: 4, // Default or calculate from seating?
+                seats: o.seats || 4,
                 angle: o.rotation
             };
         });
 
-        const { error } = await bulkSaveTables(selectedFloorId, tablesToSave);
+        const { replaceTemplateItems } = await import("@/lib/supabase/template-queries");
+        const { error } = await replaceTemplateItems(activeTemplateId, selectedFloorId, itemsToSave);
+
         if (!error) {
             setHasChanges(false);
         } else {
+            console.error(error);
             alert("Error al guardar");
         }
         setSaving(false);
@@ -216,19 +235,11 @@ export default function TablesPage() {
 
     const selectedObject = objects.find(o => o.id === selectedId) || null;
     const handleApplyTemplate = async (templateId: string) => {
-        if (!confirm("¿Deseas aplicar esta plantilla? Se reemplazará la distribución actual del piso.")) return;
-        // We might need to import applyTemplate here if not imported, assumed imported from template-queries or we add it to imports
-        const { applyTemplate } = await import("@/lib/supabase/template-queries"); // Lazy import or add up top
-
-        setLoading(true);
-        const { error } = await applyTemplate(templateId);
-        if (!error) {
-            await loadTables();
-            setActiveTemplateId(templateId);
-        } else {
-            alert("Error al aplicar plantilla");
-        }
-        setLoading(false);
+        // Just switching view, no backend "apply" needed unless we want to mark it as active?
+        // For now, day_configuration decides what is active.
+        // But maybe we want to set the "Default" for the restaurant?
+        // Let's just switch the local view.
+        setActiveTemplateId(templateId);
     };
 
     // Tool definitions

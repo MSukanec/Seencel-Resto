@@ -44,6 +44,7 @@ export interface FloorObject {
         left?: SeatConfig;
     };
     label?: string;
+    seats?: number;
     attachedWallId?: string; // ID of the wall this object is attached to
 }
 

@@ -1,12 +1,11 @@
 import { createClient } from "@/lib/supabase/client";
-import { getFloorsForRestaurant } from "./floor-queries";
-import { bulkSaveTables, getTables } from "./table-queries";
 
 export interface LayoutTemplate {
     id: string;
     restaurant_id: string;
     name: string;
     description: string | null;
+    is_active: boolean;
     created_at: string;
 }
 
@@ -19,160 +18,107 @@ export interface LayoutTemplateItem {
     y: number;
     width: number;
     height: number;
-    shape: "square" | "rectangle" | "circle";
+    shape: string; // 'rectangle', 'circle', 'round'
+    seats: number;
+    angle: number;
+}
+
+export interface LayoutTemplateItemInsert {
+    template_id: string;
+    floor_id: string;
+    label: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    shape: string;
     seats: number;
     angle: number;
 }
 
 /**
- * Get all templates for a restaurant
+ * Get all layout templates for a restaurant
  */
-export async function getTemplates(restaurantId: string) {
+export async function getLayoutTemplates(restaurantId: string) {
     const supabase = createClient();
     const { data, error } = await supabase
         .from("layout_templates")
         .select("*")
         .eq("restaurant_id", restaurantId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true });
 
-    return { data: data as LayoutTemplate[], error };
+    if (error) {
+        console.error("Error fetching layout templates:", error);
+        return { data: null, error };
+    }
+
+    return { data: data as LayoutTemplate[], error: null };
 }
 
-/**
- * Save current layout as a new template
- */
-export async function saveTemplate(restaurantId: string, name: string, description?: string) {
-    const supabase = createClient();
-
-    // 1. Create Template Metadata
-    const { data: template, error: tmplError } = await supabase
-        .from("layout_templates")
-        .insert({
-            restaurant_id: restaurantId,
-            name,
-            description
-        })
-        .select()
-        .single();
-
-    if (tmplError || !template) {
-        console.error("Error creating template:", tmplError);
-        return { error: tmplError };
-    }
-
-    // 2. Fetch All Floors
-    const { data: floors } = await getFloorsForRestaurant(restaurantId);
-    if (!floors) return { error: "No floors found" };
-
-    // 3. Collect All Tables from All Floors
-    let allTables: any[] = [];
-    for (const floor of floors) {
-        const { data: tables } = await getTables(floor.id);
-        if (tables) {
-            allTables = [...allTables, ...tables];
-        }
-    }
-
-    // 4. Save Items to Template
-    if (allTables.length > 0) {
-        const items = allTables.map(t => ({
-            template_id: template.id,
-            floor_id: t.floor_id,
-            label: t.label,
-            x: t.x,
-            y: t.y,
-            width: t.width,
-            height: t.height,
-            shape: t.shape,
-            seats: t.seats,
-            angle: t.angle
-        }));
-
-        const { error: itemsError } = await supabase
-            .from("layout_template_items")
-            .insert(items);
-
-        if (itemsError) {
-            console.error("Error saving template items:", itemsError);
-            await deleteTemplate(template.id); // Rollback
-            return { error: itemsError };
-        }
-    }
-
-    return { data: template, error: null };
-}
+// Alias for compatibility
+export const getTemplates = getLayoutTemplates;
 
 /**
- * Apply a template (Restores layout for all floors)
+ * Get items for a specific template (optionally filtered by floor)
  */
-export async function applyTemplate(templateId: string) {
+export async function getTemplateItems(templateId: string, floorId?: string) {
     const supabase = createClient();
-
-    // 1. Get Template Info
-    const { data: template } = await supabase
-        .from("layout_templates")
-        .select("restaurant_id")
-        .eq("id", templateId)
-        .single();
-
-    if (!template) return { error: "Template not found" };
-
-    // 2. Get Template Items
-    const { data: items, error: itemsError } = await supabase
+    let query = supabase
         .from("layout_template_items")
         .select("*")
         .eq("template_id", templateId);
 
-    if (itemsError || !items) return { error: itemsError };
-
-    // 3. Group Items by Floor
-    const itemsByFloor: Record<string, any[]> = {};
-    items.forEach(item => {
-        if (!itemsByFloor[item.floor_id]) itemsByFloor[item.floor_id] = [];
-        itemsByFloor[item.floor_id].push(item);
-    });
-
-    // 4. Get Floors to Clean/Update
-    const { data: floors } = await getFloorsForRestaurant(template.restaurant_id);
-    if (!floors) return { error: "No floors found" };
-
-    // 5. Restore each floor
-    for (const floor of floors) {
-        const floorItems = itemsByFloor[floor.id] || [];
-
-        // Map to format for bulkSave
-        const tablesToInsert = floorItems.map(item => ({
-            label: item.label,
-            x: item.x,
-            y: item.y,
-            width: item.width,
-            height: item.height,
-            shape: item.shape,
-            seats: item.seats,
-            angle: item.angle
-        }));
-
-        // bulkSaveTables handles deletion of previous content
-        await bulkSaveTables(floor.id, tablesToInsert);
+    if (floorId) {
+        query = query.eq("floor_id", floorId);
     }
 
-    return { error: null };
+    const { data, error } = await query;
+
+    if (error) {
+        console.error("Error fetching template items:", error);
+        return { data: null, error };
+    }
+
+    return { data: data as LayoutTemplateItem[], error: null };
 }
 
 /**
- * Update a template metadata (name, description)
+ * Create a new layout template
  */
-export async function updateTemplate(templateId: string, updates: { name?: string; description?: string }) {
+export async function createLayoutTemplate(template: Partial<LayoutTemplate> & { restaurant_id: string, name: string }) {
     const supabase = createClient();
     const { data, error } = await supabase
         .from("layout_templates")
-        .update(updates)
-        .eq("id", templateId)
+        .insert(template)
         .select()
         .single();
 
     return { data, error };
 }
+
+// Alias/Helper for simple save
+export async function saveTemplate(restaurantId: string, name: string) {
+    return createLayoutTemplate({ restaurant_id: restaurantId, name });
+}
+
+
+/**
+ * Update a layout template (e.g. name, is_active)
+ */
+export async function updateLayoutTemplate(id: string, updates: Partial<LayoutTemplate>) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("layout_templates")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+
+    return { data, error };
+}
+
+// Alias
+export const updateTemplate = updateLayoutTemplate;
 
 /**
  * Delete a template
@@ -185,4 +131,40 @@ export async function deleteTemplate(templateId: string) {
         .eq("id", templateId);
 
     return { error };
+}
+
+
+/**
+ * Replace all items for a template on a specific floor (Canvas Save)
+ */
+export async function replaceTemplateItems(templateId: string, floorId: string, items: Omit<LayoutTemplateItemInsert, "template_id" | "floor_id">[]) {
+    const supabase = createClient();
+
+    // 1. Delete existing items for this template on this floor
+    const { error: deleteError } = await supabase
+        .from("layout_template_items")
+        .delete()
+        .eq("template_id", templateId)
+        .eq("floor_id", floorId);
+
+    if (deleteError) {
+        console.error("Error deleting old template items:", deleteError);
+        return { error: deleteError };
+    }
+
+    // 2. Insert new items
+    if (items.length === 0) return { data: [], error: null };
+
+    const itemsToInsert = items.map(item => ({
+        ...item,
+        template_id: templateId,
+        floor_id: floorId
+    }));
+
+    const { data, error } = await supabase
+        .from("layout_template_items")
+        .insert(itemsToInsert)
+        .select();
+
+    return { data, error };
 }

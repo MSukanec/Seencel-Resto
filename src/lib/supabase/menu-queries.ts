@@ -21,9 +21,8 @@ export interface MenuItem {
     is_available: boolean;
 }
 
-const supabase = createClient();
-
 export async function getMenu(restaurantId: string) {
+    const supabase = createClient();
     const { data, error } = await supabase
         .from("menu_categories")
         .select(`
@@ -38,25 +37,31 @@ export async function getMenu(restaurantId: string) {
 }
 
 export async function upsertCategory(category: Partial<MenuCategory>) {
+    const supabase = createClient();
     return await supabase.from("menu_categories").upsert(category).select().single();
 }
 
 export async function deleteCategory(id: string) {
+    const supabase = createClient();
     return await supabase.from("menu_categories").delete().eq("id", id);
 }
 
 export async function upsertMenuItem(item: Partial<MenuItem>) {
+    const supabase = createClient();
     return await supabase.from("menu_items").upsert(item).select().single();
 }
 
 export async function deleteMenuItem(id: string) {
+    const supabase = createClient();
     return await supabase.from("menu_items").delete().eq("id", id);
 }
 
 export async function updateCategorySort(categories: { id: string, sort_order: number }[]) {
+    const supabase = createClient();
     return await supabase.from("menu_categories").upsert(categories);
 }
 
 export async function updateItemSort(items: { id: string, sort_order: number }[]) {
+    const supabase = createClient();
     return await supabase.from("menu_items").upsert(items);
 }

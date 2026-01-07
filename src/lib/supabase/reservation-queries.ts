@@ -19,6 +19,7 @@ export interface DayConfiguration {
     event_name: string | null;
     custom_time_slots: string[] | null; // e.g. ["20:00", "22:00"]
     is_closed: boolean;
+    layout_template_id?: string | null;
 }
 
 // --- Operating Schedules ---

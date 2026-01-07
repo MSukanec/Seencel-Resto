@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog } from "@/components/ui/dialog"; // Assuming we have a generic Drawer or using Dialog for now. Let's use a side-sheet style if possible, but Dialog is fine.
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { X, Plus, Trash2, Calendar, Clock, Star, AlertCircle, Loader2 } from "lucide-react";
+import { X, Plus, Trash2, Calendar, Clock, Star, AlertCircle, Loader2, LayoutTemplate as LayoutIcon } from "lucide-react";
 import { DayConfiguration, upsertDayConfiguration, deleteDayConfiguration } from "@/lib/supabase/reservation-queries";
+import { getLayoutTemplates, LayoutTemplate } from "@/lib/supabase/template-queries";
 import { cn } from "@/lib/utils";
 
 interface DayConfigDrawerProps {
@@ -25,6 +25,19 @@ export function DayConfigDrawer({ isOpen, onClose, date, restaurantId, initialCo
     const [newSlot, setNewSlot] = useState("");
     const [saving, setSaving] = useState(false);
 
+    // Floor Template Logic
+    const [templates, setTemplates] = useState<LayoutTemplate[]>([]);
+    const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+
+    // Load available templates
+    useEffect(() => {
+        if (restaurantId && isOpen) {
+            getLayoutTemplates(restaurantId).then(({ data }) => {
+                if (data) setTemplates(data);
+            });
+        }
+    }, [restaurantId, isOpen]);
+
     // Reset state when opening
     useEffect(() => {
         if (isOpen && initialConfig) {
@@ -32,12 +45,14 @@ export function DayConfigDrawer({ isOpen, onClose, date, restaurantId, initialCo
             setEventName(initialConfig.event_name || "");
             setIsClosed(initialConfig.is_closed);
             setCustomSlots(initialConfig.custom_time_slots || []);
+            setSelectedTemplateId(initialConfig.layout_template_id || null);
         } else {
             // Default blank state
             setIsSpecial(false);
             setEventName("");
             setIsClosed(false);
             setCustomSlots([]);
+            setSelectedTemplateId(null);
         }
     }, [isOpen, initialConfig]);
 
@@ -64,8 +79,9 @@ export function DayConfigDrawer({ isOpen, onClose, date, restaurantId, initialCo
             date: format(date, "yyyy-MM-dd"),
             is_special_event: isSpecial,
             event_name: isSpecial ? eventName : null,
-            custom_time_slots: isSpecial ? customSlots : null, // Only save slots if it IS a special event, otherwise rely on logic
-            is_closed: isClosed
+            custom_time_slots: isSpecial ? customSlots : null, // Only save slots if it IS a special event
+            is_closed: isClosed,
+            layout_template_id: selectedTemplateId // Save the selected template
         };
 
         const { error } = await upsertDayConfiguration(configToSave);
@@ -113,6 +129,27 @@ export function DayConfigDrawer({ isOpen, onClose, date, restaurantId, initialCo
                 </div>
 
                 <div className="space-y-8 flex-1">
+
+                    {/* Floor Template Selector - Always visible */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-bold text-foreground flex items-center gap-2">
+                            <LayoutIcon size={16} className="text-primary" />
+                            Plantilla de Mesas
+                        </label>
+                        <select
+                            value={selectedTemplateId || ""}
+                            onChange={(e) => setSelectedTemplateId(e.target.value || null)}
+                            className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        >
+                            <option value="">Predeterminado (Según Restaurante)</option>
+                            {templates.map(t => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-muted-foreground">Define qué distribución de mesas se usará este día.</p>
+                    </div>
+
+                    <div className="h-px bg-border/50" />
 
                     {/* Status Toggles */}
                     <div className="space-y-4">

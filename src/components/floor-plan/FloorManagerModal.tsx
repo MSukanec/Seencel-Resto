@@ -150,14 +150,18 @@ export function FloorManagerModal({ restaurantId }: FloorManagerModalProps) {
                     </div>
                 )}
 
-                <div className="flex justify-end gap-3 pt-2">
-                    <Button variant="ghost" type="button" onClick={closeModal} disabled={isSubmitting}>
-                        Cancelar
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting || !floorName.trim()}>
-                        {isSubmitting && <Loader2 className="animate-spin mr-2" size={16} />}
-                        {buttonLabel}
-                    </Button>
+                <div className="flex justify-between pt-2">
+
+
+                    <div className="flex gap-3">
+                        <Button variant="ghost" type="button" onClick={closeModal} disabled={isSubmitting}>
+                            Cancelar
+                        </Button>
+                        <Button type="submit" disabled={isSubmitting || !floorName.trim()}>
+                            {isSubmitting && <Loader2 className="animate-spin mr-2" size={16} />}
+                            {buttonLabel}
+                        </Button>
+                    </div>
                 </div>
             </form>
         </Dialog>

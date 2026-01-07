@@ -1,7 +1,5 @@
 import { createClient } from "./client";
 
-const supabase = createClient();
-
 export interface Customer {
     id: string;
     restaurant_id: string;
@@ -18,6 +16,7 @@ export interface Customer {
 }
 
 export async function getCustomers(restaurantId: string) {
+    const supabase = createClient();
     return await supabase
         .from("customers")
         .select("*")
@@ -26,6 +25,7 @@ export async function getCustomers(restaurantId: string) {
 }
 
 export async function upsertCustomer(customer: Partial<Customer>) {
+    const supabase = createClient();
     return await supabase
         .from("customers")
         .upsert(customer)
@@ -34,6 +34,7 @@ export async function upsertCustomer(customer: Partial<Customer>) {
 }
 
 export async function deleteCustomer(id: string) {
+    const supabase = createClient();
     return await supabase
         .from("customers")
         .delete()
