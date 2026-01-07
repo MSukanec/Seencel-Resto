@@ -118,4 +118,24 @@ export async function deleteFloor(floorId: string) {
 /**
  * Get or create default floor for a restaurant
  */
-// getOrCreateDefaultFloor removed per user request (no auto-creation)
+// ... existing code ...
+
+/**
+ * Update the default floor for a restaurant
+ */
+export async function updateRestaurantDefaultFloor(restaurantId: string, floorId: string | null) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("restaurants")
+        .update({ default_floor_id: floorId })
+        .eq("id", restaurantId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating default floor:", error);
+        return { data: null, error };
+    }
+
+    return { data, error: null };
+}
