@@ -7,6 +7,9 @@ export interface RestaurantSettings {
     restaurant_id: string;
     chair_spacing_cm: number;
     default_table_size_cm: number;
+    reservation_interval_minutes: number;
+    min_reservation_time_hours: number;
+    max_reservation_time_days: number;
     created_at: string;
     updated_at: string;
 }
@@ -25,7 +28,7 @@ export async function getRestaurantSettings(restaurantId: string) {
 
 export async function updateRestaurantSettings(
     restaurantId: string,
-    settings: Partial<Pick<RestaurantSettings, 'chair_spacing_cm' | 'default_table_size_cm'>>
+    settings: Partial<Pick<RestaurantSettings, 'chair_spacing_cm' | 'default_table_size_cm' | 'reservation_interval_minutes' | 'min_reservation_time_hours' | 'max_reservation_time_days'>>
 ) {
     const supabase = await createClient();
 

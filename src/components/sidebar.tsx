@@ -15,13 +15,15 @@ import {
     PencilRuler,
     Armchair,
     Store,
-    Users
+    Users,
+    Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFloor } from "@/contexts/FloorContext";
 
 const SIDEBAR_ITEMS = [
     { icon: LayoutDashboard, label: "Panel", href: "/dashboard" },
+    { icon: Calendar, label: "Calendario", href: "/dashboard/calendar" },
     { icon: UtensilsCrossed, label: "Pedidos", href: "/dashboard/orders" },
     { icon: ChefHat, label: "Menú", href: "/dashboard/menu" },
     { icon: Users, label: "Clientes", href: "/dashboard/customers" },
@@ -42,6 +44,8 @@ export function Sidebar({ className }: { className?: string }) {
     const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
         "Configuración": true // Default open
     });
+    // Placeholder user state - in a real app, fetch from context or props
+    const user = { name: "Usuario", email: "admin@seencel.com" };
 
     const toggleGroup = (label: string) => {
         setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }));
@@ -154,15 +158,24 @@ export function Sidebar({ className }: { className?: string }) {
                 })}
             </nav>
 
-            <div className="p-4 border-t border-border space-y-1">
+            <div className="p-4 border-t border-border space-y-2 bg-background/50">
+                {/* User Profile */}
+                <div className="flex items-center gap-3 px-2 py-2 mb-2 rounded-xl bg-card border border-border/50">
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-emerald-500 ring-2 ring-border shrink-0"></div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold truncate text-foreground">{user.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                </div>
+
                 <Link
                     href="/restaurants"
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-primary/10 hover:text-primary text-muted-foreground"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-primary/10 hover:text-primary text-muted-foreground"
                 >
                     <Store size={18} />
                     Cambiar Restaurante
                 </Link>
-                <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
+                <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
                     <LogOut size={18} />
                     Cerrar Sesión
                 </button>

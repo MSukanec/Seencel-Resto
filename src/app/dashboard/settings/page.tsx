@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/image-utils";
-import { Loader2, Upload, Save, MapPin, DollarSign, Store, Globe } from "lucide-react";
+import { Loader2, Upload, Save, MapPin, DollarSign, Store, Globe, CalendarClock } from "lucide-react";
 import Image from "next/image";
 import { Armchair } from "lucide-react";
 
@@ -20,6 +20,9 @@ interface RestaurantSettings {
 interface FloorEditorSettings {
     chair_spacing_cm: number;
     default_table_size_cm: number;
+    reservation_interval_minutes: number;
+    min_reservation_time_hours: number;
+    max_reservation_time_days: number;
 }
 
 export default function SettingsPage() {
@@ -27,6 +30,7 @@ export default function SettingsPage() {
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [restaurantId, setRestaurantId] = useState<string | null>(null);
+    const [operatingDays, setOperatingDays] = useState<Set<number>>(new Set([0, 1, 2, 3, 4, 5, 6])); // Default all open
     const [settings, setSettings] = useState<RestaurantSettings>({
         name: "",
         slug: "",
@@ -37,6 +41,9 @@ export default function SettingsPage() {
     const [floorSettings, setFloorSettings] = useState<FloorEditorSettings>({
         chair_spacing_cm: 60,
         default_table_size_cm: 70,
+        reservation_interval_minutes: 30,
+        min_reservation_time_hours: 2,
+        max_reservation_time_days: 30
     });
     const [savingFloor, setSavingFloor] = useState(false);
 
@@ -99,15 +106,39 @@ export default function SettingsPage() {
     const fetchFloorSettings = async (id: string) => {
         const { data } = await supabase
             .from("restaurant_settings")
-            .select("chair_spacing_cm, default_table_size_cm")
+            .select("chair_spacing_cm, default_table_size_cm, reservation_interval_minutes, min_reservation_time_hours, max_reservation_time_days")
             .eq("restaurant_id", id)
             .single();
 
         if (data) {
             setFloorSettings({
                 chair_spacing_cm: data.chair_spacing_cm || 60,
-                default_table_size_cm: data.default_table_size_cm || 70
+                default_table_size_cm: data.default_table_size_cm || 70,
+                reservation_interval_minutes: data.reservation_interval_minutes || 30,
+                min_reservation_time_hours: data.min_reservation_time_hours || 2,
+                max_reservation_time_days: data.max_reservation_time_days || 30
             });
+        }
+    };
+
+    const fetchOperatingSchedules = async (id: string) => {
+        const { data: schedules, error } = await supabase
+            .from("operating_schedules")
+            .select("day_of_week, is_closed, opening_time, closing_time")
+            .eq("restaurant_id", id)
+            .order("day_of_week", { ascending: true });
+
+        if (error) {
+            console.error("Error fetching operating schedules:", error);
+            return;
+        }
+
+        if (schedules && schedules.length > 0) {
+            const openDays = new Set<number>();
+            schedules.forEach(s => {
+                if (!s.is_closed) openDays.add(s.day_of_week);
+            });
+            setOperatingDays(openDays);
         }
     };
 
@@ -149,6 +180,9 @@ export default function SettingsPage() {
             .update({
                 chair_spacing_cm: floorSettings.chair_spacing_cm,
                 default_table_size_cm: floorSettings.default_table_size_cm,
+                reservation_interval_minutes: floorSettings.reservation_interval_minutes,
+                min_reservation_time_hours: floorSettings.min_reservation_time_hours,
+                max_reservation_time_days: floorSettings.max_reservation_time_days,
                 updated_at: new Date().toISOString()
             })
             .eq("restaurant_id", restaurantId);
@@ -402,6 +436,112 @@ export default function SettingsPage() {
                             onChange={(e) => setFloorSettings(prev => ({ ...prev, default_table_size_cm: Number(e.target.value) }))}
                             className="w-32 bg-background border border-border rounded-xl py-2.5 px-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         />
+                    </div>
+                </div>
+
+                <div className="pt-4 flex justify-end border-t border-border">
+                    <button
+                        type="button"
+                        disabled={savingFloor}
+                        onClick={handleSaveFloorSettings}
+                        className="flex items-center gap-2 bg-primary text-primary-foreground font-bold px-6 py-2.5 rounded-xl hover:brightness-110 transition-all shadow-md disabled:opacity-50"
+                    >
+                        {savingFloor ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                        {savingFloor ? "Guardando..." : "Guardar"}
+                    </button>
+                </div>
+            </section>
+
+            {/* Reservation Settings */}
+            <section className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-6">
+                <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                    <CalendarClock size={20} className="text-primary" /> Configuración de Reservas
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                    Define las reglas generales para la toma de reservas.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Intervalo (minutos)</label>
+                        <p className="text-xs text-muted-foreground">
+                            Cada cuánto se ofrecen turnos (ej: cada 30 min).
+                        </p>
+                        <select
+                            value={floorSettings.reservation_interval_minutes}
+                            onChange={(e) => setFloorSettings(prev => ({ ...prev, reservation_interval_minutes: Number(e.target.value) }))}
+                            className="w-full bg-background border border-border rounded-xl py-2.5 px-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        >
+                            <option value={15}>15 minutos</option>
+                            <option value={30}>30 minutos</option>
+                            <option value={45}>45 minutos</option>
+                            <option value={60}>1 hora</option>
+                        </select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Antelación Mínima (horas)</label>
+                        <p className="text-xs text-muted-foreground">
+                            Tiempo mínimo antes para reservar.
+                        </p>
+                        <input
+                            type="number"
+                            min={0}
+                            max={48}
+                            value={floorSettings.min_reservation_time_hours}
+                            onChange={(e) => setFloorSettings(prev => ({ ...prev, min_reservation_time_hours: Number(e.target.value) }))}
+                            className="w-full bg-background border border-border rounded-xl py-2.5 px-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Ventana de Reserva (días)</label>
+                        <p className="text-xs text-muted-foreground">
+                            Con cuántos días de anticipación se puede reservar.
+                        </p>
+                        <input
+                            type="number"
+                            min={1}
+                            max={365}
+                            value={floorSettings.max_reservation_time_days}
+                            onChange={(e) => setFloorSettings(prev => ({ ...prev, max_reservation_time_days: Number(e.target.value) }))}
+                            className="w-full bg-background border border-border rounded-xl py-2.5 px-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                    </div>
+                </div>
+
+                {/* Días de Apertura */}
+                <div className="space-y-4 pt-4 border-t border-border">
+                    <h3 className="text-sm font-bold text-foreground">Días de Apertura</h3>
+                    <p className="text-xs text-muted-foreground">Selecciona los días que el restaurante abre al público. Los días desmarcados aparecerán como "Cerrado".</p>
+
+                    <div className="flex flex-wrap gap-2">
+                        {["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"].map((dayName, index) => {
+                            const isSelected = operatingDays.has(index);
+                            return (
+                                <button
+                                    key={index}
+                                    onClick={() => {
+                                        const newDays = new Set(operatingDays);
+                                        if (isSelected) {
+                                            newDays.delete(index);
+                                        } else {
+                                            newDays.add(index);
+                                        }
+                                        setOperatingDays(newDays);
+                                    }}
+                                    className={`
+                                        px-4 py-2 rounded-full text-sm font-medium transition-all border
+                                        ${isSelected
+                                            ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20 hover:brightness-110"
+                                            : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:bg-muted"
+                                        }
+                                    `}
+                                >
+                                    {dayName}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
