@@ -115,42 +115,30 @@ export async function deleteTable(tableId: string) {
 }
 
 /**
- * Bulk save tables (replaces all tables for a floor - dangerous, use with caution)
- * Typically used if we wanted to 'save' the current canvas state as the new reality manually,
- * though normally updates might be granular.
+ * Bulk save tables (Upsert strategy to preserve IDs)
  */
 export async function bulkSaveTables(floorId: string, tables: Omit<TableInsert, "floor_id">[]) {
     const supabase = await createClient();
 
-    // 1. Delete existing tables for this floor
-    const { error: deleteError } = await supabase
-        .from("tables")
-        .delete()
-        .eq("floor_id", floorId);
-
-    if (deleteError) {
-        console.error("Error deleting old tables in bulkSave:", JSON.stringify(deleteError, null, 2));
-        return { data: null, error: deleteError };
-    }
-
-    // 2. Insert new tables
     if (tables.length === 0) {
         return { data: [], error: null };
     }
 
-    const tablesToInsert = tables.map(t => ({
+    // Map to include floor_id and ensure ID is present if available
+    const tablesToUpsert = tables.map(t => ({
         ...t,
         floor_id: floorId,
+        updated_at: new Date().toISOString()
     }));
 
+    // Perform Upsert
     const { data, error } = await supabase
         .from("tables")
-        .insert(tablesToInsert)
+        .upsert(tablesToUpsert, { onConflict: 'id' })
         .select();
 
     if (error) {
-        console.error("Error bulk saving tables - Insert Payload:", JSON.stringify(tablesToInsert[0], null, 2)); // Log first item sample
-        console.error("Error bulk saving tables - Supabase Error:", JSON.stringify(error, null, 2));
+        console.error("Error bulk saving tables (Upsert):", error);
         return { data: null, error };
     }
 

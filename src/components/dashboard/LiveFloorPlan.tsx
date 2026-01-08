@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 function canvasToTableDb(obj: FloorObject, floorId: string): Omit<TableInsert, "floor_id"> | null {
     if (obj.type !== "table" && obj.type !== "bar") return null;
     return {
+        id: obj.id, // Critical: Include ID for UPSERT to work
         label: obj.label || `Mesa ${obj.id.slice(0, 4)}`,
         x: obj.x,
         y: obj.y,
