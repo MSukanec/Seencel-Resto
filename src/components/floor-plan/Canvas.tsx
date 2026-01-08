@@ -45,6 +45,12 @@ export interface FloorObject {
     };
     label?: string;
     seats?: number;
+    // Service Fields
+    status?: "available" | "occupied" | "reserved" | "dirty";
+    current_pax?: number;
+    customerName?: string;
+
+    // For architecture
     attachedWallId?: string; // ID of the wall this object is attached to
 }
 
@@ -1074,9 +1080,9 @@ export const Canvas = ({
                                                     cy={centerY}
                                                     rx={obj.width / 2}
                                                     ry={obj.height / 2}
-                                                    fill={isBar ? "#fefce8" : "#fafafa"}
-                                                    stroke={isSelected ? undefined : "#a8a29e"}
-                                                    strokeWidth={isSelected ? 3 : 1.5}
+                                                    fill={obj.status === "occupied" ? "#fee2e2" : (isBar ? "#fefce8" : "#fafafa")}
+                                                    stroke={isSelected ? undefined : (obj.status === "occupied" ? "#ef4444" : "#a8a29e")}
+                                                    strokeWidth={isSelected ? 3 : (obj.status === "occupied" ? 2 : 1.5)}
                                                     className={cn(
                                                         "transition-colors",
                                                         isInteracting ? "cursor-move hover:stroke-primary" : "pointer-events-none",
@@ -1091,9 +1097,9 @@ export const Canvas = ({
                                                     width={obj.width}
                                                     height={obj.height}
                                                     rx={isBar ? 8 : 4}
-                                                    fill={isBar ? "#fefce8" : "#fafafa"}
-                                                    stroke={isSelected ? undefined : "#a8a29e"}
-                                                    strokeWidth={isSelected ? 3 : 1.5}
+                                                    fill={obj.status === "occupied" ? "#fee2e2" : (isBar ? "#fefce8" : "#fafafa")}
+                                                    stroke={isSelected ? undefined : (obj.status === "occupied" ? "#ef4444" : "#a8a29e")}
+                                                    strokeWidth={isSelected ? 3 : (obj.status === "occupied" ? 2 : 1.5)}
                                                     className={cn(
                                                         "transition-colors",
                                                         isInteracting ? "cursor-move hover:stroke-primary" : "pointer-events-none",
@@ -1117,7 +1123,7 @@ export const Canvas = ({
                                                     fill="#71717a"
                                                     className="pointer-events-none select-none"
                                                 >
-                                                    {obj.label}
+                                                    {obj.status === "occupied" && obj.customerName ? obj.customerName : obj.label}
                                                 </text>
                                             )}
                                         </g>

@@ -54,3 +54,46 @@ export async function openTableSession({ tableId, restaurantId, customerId, pax 
     revalidatePath("/dashboard");
     return { data: session };
 }
+
+export async function closeTableSession(tableId: string) {
+    const supabase = await createClient();
+
+    // 1. Get Table to find current_session_id
+    const { data: table, error: tableFetchError } = await supabase
+        .from("tables")
+        .select("current_session_id")
+        .eq("id", tableId)
+        .single();
+
+    if (tableFetchError) return { error: tableFetchError.message };
+
+    // 2. Close Session Record
+    if (table?.current_session_id) {
+        const { error: sessionError } = await supabase
+            .from("sessions")
+            .update({
+                status: "closed",
+                closed_at: new Date().toISOString()
+            })
+            .eq("id", table?.current_session_id);
+
+        if (sessionError) console.error("Error closing session:", sessionError);
+    }
+
+    // 3. Free Table
+    const { error: tableError } = await supabase
+        .from("tables")
+        .update({
+            status: "available",
+            current_pax: null,
+            customer_id: null,
+            current_session_id: null,
+            opened_at: null
+        })
+        .eq("id", tableId);
+
+    if (tableError) return { error: tableError.message };
+
+    revalidatePath("/dashboard");
+    return { success: true };
+}

@@ -46,7 +46,7 @@ export async function getTables(floorId: string) {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from("tables")
-        .select("*")
+        .select("*, customers(first_name, last_name)")
         .eq("floor_id", floorId);
 
     if (error) {

@@ -112,6 +112,10 @@ function SingleFloorView({ floorId, floorName, isActive, onSelect, selectedTool,
                 shape: t.shape as any,
                 seats: t.seats,
                 label: t.label,
+                // Service State Mapping
+                status: t.status,
+                current_pax: t.current_pax,
+                customerName: (t as any).customers?.first_name, // Map customer name
                 seating: { // Default enabled
                     top: { enabled: true, type: "chair" },
                     right: { enabled: true, type: "chair" },
