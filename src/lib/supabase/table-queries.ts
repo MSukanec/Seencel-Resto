@@ -28,6 +28,7 @@ export interface TableUpdatePayload {
 }
 
 export interface TableInsert {
+    id?: string; // Optional for new, required for updates/upserts
     floor_id: string;
     label: string;
     x: number;
