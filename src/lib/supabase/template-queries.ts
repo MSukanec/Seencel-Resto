@@ -168,3 +168,72 @@ export async function replaceTemplateItems(templateId: string, floorId: string, 
 
     return { data, error };
 }
+
+
+/**
+ * Apply a Template to the Real Layout (DESTRUCTIVE ACTION)
+ * This overwrites the 'tables' table with items from 'layout_template_items'.
+ */
+export async function applyTemplateToFloor(templateId: string, floorId: string) {
+    const supabase = createClient();
+
+    // 1. Fetch template items
+    const { data: templateItems, error: fetchError } = await supabase
+        .from("layout_template_items")
+        .select("*")
+        .eq("template_id", templateId);
+
+    if (fetchError) {
+        console.error("Error fetching template items to apply:", fetchError);
+        return { error: fetchError };
+    }
+
+    if (!templateItems) {
+        return { error: new Error("Template not found or empty") };
+    }
+
+    // 2. Map items to 'Table' format
+    // Note: We ignore the original 'floor_id' regarding WHERE the item was stored in the template,
+    // and instead use the target 'floorId' we are applying TO.
+    // Although typically templates are bound to a floor, this allows flexibility.
+    const tablesToInsert = templateItems.map(item => ({
+        floor_id: floorId,
+        label: item.label,
+        x: item.x,
+        y: item.y,
+        width: item.width,
+        height: item.height,
+        shape: item.shape,
+        seats: item.seats,
+        angle: item.angle
+    }));
+
+    // 3. Transactions are not natively supported in Client Library normally,
+    // but we can do sequential operations.
+    // Ideally this should be a stored procedure for atomicity, but for now:
+
+    // A. Delete current live tables
+    const { error: deleteError } = await supabase
+        .from("tables")
+        .delete()
+        .eq("floor_id", floorId);
+
+    if (deleteError) {
+        console.error("Error clearing current floor tables:", deleteError);
+        return { error: deleteError };
+    }
+
+    // B. Insert new tables
+    if (tablesToInsert.length > 0) {
+        const { error: insertError } = await supabase
+            .from("tables")
+            .insert(tablesToInsert);
+
+        if (insertError) {
+            console.error("Error applying template tables:", insertError);
+            return { error: insertError };
+        }
+    }
+
+    return { error: null };
+}

@@ -30,7 +30,7 @@ export default function LoginPage() {
             }
 
             router.refresh();
-            router.push("/dashboard");
+            router.push("/restaurants");
         } catch (err: unknown) {
             // Basic error translation or generic message
             const message = (err as Error).message;

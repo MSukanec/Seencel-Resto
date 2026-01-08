@@ -1,9 +1,6 @@
-import {
-    Users,
-    DollarSign,
-    ShoppingBag,
-    Activity
-} from "lucide-react";
+import { LiveFloorPlan } from "@/components/dashboard/LiveFloorPlan";
+import { Users, DollarSign, ShoppingBag, Activity } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
     const stats = [
@@ -14,67 +11,42 @@ export default function DashboardPage() {
     ];
 
     return (
-        <div className="space-y-6 p-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {stats.map((stat, i) => (
-                    <div key={i} className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                        <div className="flex items-center justify-between space-y-0 pb-2">
-                            <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                            <div className="rounded-full bg-primary/10 p-2 text-primary">
-                                <stat.icon size={16} />
+        <div className="flex flex-col h-full bg-muted/30">
+            {/* Compact Header with Integrated KPIs */}
+            <div className="flex h-16 items-center justify-between px-6 border-b bg-background/50 backdrop-blur-md sticky top-0 z-10 shrink-0 gap-4">
+                <div className="flex items-center gap-3 shrink-0">
+                    <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                        <Activity size={24} />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-bold">Panel</h1>
+                        <p className="text-xs text-muted-foreground">Resumen en tiempo real</p>
+                    </div>
+                </div>
+
+                {/* Horizontal KPIs Scrollable if needed */}
+                <div className="flex items-center gap-6 overflow-x-auto no-scrollbar mask-gradient-x flex-1 justify-end">
+                    {stats.map((stat, i) => (
+                        <div key={i} className="flex items-center gap-3 shrink-0">
+                            <div className="text-right">
+                                <div className="text-sm font-bold text-foreground">{stat.value}</div>
+                                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{stat.label}</div>
+                            </div>
+                            <div className={cn(
+                                "flex flex-col text-[10px] mobile-hidden",
+                                stat.trend.includes('+') ? "text-emerald-500" : "text-muted-foreground"
+                            )}>
+                                <span className="font-bold">{stat.trend.split(' ')[0]}</span>
+                                <stat.icon size={14} className="opacity-50 ml-auto" />
                             </div>
                         </div>
-                        <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                        <p className="text-xs text-muted-foreground">{stat.trend}</p>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-
-                {/* Main Chart Area (Mock) */}
-                <div className="col-span-4 rounded-xl border border-border bg-card p-6 shadow-sm">
-                    <div className="mb-4">
-                        <h3 className="text-lg font-semibold text-foreground">Ingresos Semanales</h3>
-                        <p className="text-sm text-muted-foreground">Resumen de tu rendimiento.</p>
-                    </div>
-                    <div className="h-[300px] w-full items-end justify-between gap-2 overflow-hidden rounded-md flex pl-4 pb-4">
-                        {[40, 70, 45, 90, 60, 80, 50].map((h, i) => (
-                            <div key={i} className="relative w-full group">
-                                <div
-                                    className="w-full rounded-t-sm bg-primary/20 transition-all hover:bg-primary cursor-pointer hover:shadow-[0_0_20px_-5px_var(--primary)]"
-                                    style={{ height: `${h}%` }}
-                                ></div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Recent Sales/Activity */}
-                <div className="col-span-3 rounded-xl border border-border bg-card p-6 shadow-sm">
-                    <div className="mb-4">
-                        <h3 className="text-lg font-semibold text-foreground">Actividad Reciente</h3>
-                        <p className="text-sm text-muted-foreground">Últimas transacciones y movimientos.</p>
-                    </div>
-                    <div className="space-y-6">
-                        {[1, 2, 3, 4, 5].map((_, i) => (
-                            <div key={i} className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-9 w-9 rounded-full bg-accent/50 flex items-center justify-center text-xs font-bold text-foreground">
-                                        M{i + 1}
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-medium leading-none text-foreground">Mesa {i + 5}</p>
-                                        <p className="text-xs text-muted-foreground">hace 2 min</p>
-                                    </div>
-                                </div>
-                                <div className="text-sm font-medium text-foreground">
-                                    +${((i + 1) * 12.34).toFixed(2)}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            {/* Main Content: Full Screen Floor Plan */}
+            <div className="flex-1 overflow-hidden relative">
+                <LiveFloorPlan />
             </div>
         </div>
     );

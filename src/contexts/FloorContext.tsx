@@ -114,3 +114,8 @@ export function useFloor() {
     }
     return context;
 }
+
+export function useSafeFloor() {
+    const context = useContext(FloorContext);
+    return context || null;
+}

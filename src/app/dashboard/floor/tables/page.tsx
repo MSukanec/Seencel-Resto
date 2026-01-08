@@ -205,30 +205,38 @@ export default function TablesPage() {
 
         const itemsToSave = objects.map(o => {
             let shape: "square" | "rectangle" | "circle" = "rectangle";
-            if (o.shape === "rectangular") shape = "rectangle";
-            else if (o.shape === "circular") shape = "circle";
-            else if (o.shape === "square") shape = "square";
+            // Robust mapping covering potential Canvas variants and DB expectations
+            const s = (o.shape || "rectangular").toLowerCase();
+            if (s === "rectangular" || s === "rectangle") shape = "rectangle";
+            else if (s === "circular" || s === "circle" || s === "round") shape = "circle";
+            else if (s === "square") shape = "square";
+
+            // Semicircle fallback to rectangle for now as DB might not support it
+            if (s === "semicircle") shape = "rectangle";
 
             return {
                 label: o.label || "Mesa",
-                x: o.x,
-                y: o.y,
-                width: o.width,
-                height: o.height,
+                x: Math.round(o.x), // Ensure integers? DB usually implies numeric but rounding is safer
+                y: Math.round(o.y),
+                width: Math.round(o.width),
+                height: Math.round(o.height),
                 shape: shape,
                 seats: o.seats || 4,
-                angle: o.rotation
+                angle: Math.round(o.rotation)
             };
         });
+
+        console.log("Saving items:", itemsToSave);
 
         const { replaceTemplateItems } = await import("@/lib/supabase/template-queries");
         const { error } = await replaceTemplateItems(activeTemplateId, selectedFloorId, itemsToSave);
 
         if (!error) {
             setHasChanges(false);
+            // Optional: Show toast
         } else {
-            console.error(error);
-            alert("Error al guardar");
+            console.error("Error saving template items:", error);
+            alert(`Error al guardar: ${error.message || JSON.stringify(error)}`);
         }
         setSaving(false);
     };

@@ -49,6 +49,16 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url)
     }
 
+    // Check for restaurant selection when accessing dashboard
+    if (user && request.nextUrl.pathname.startsWith("/dashboard")) {
+        const selectedRestaurant = request.cookies.get("selected_restaurant_id");
+        if (!selectedRestaurant) {
+            const url = request.nextUrl.clone();
+            url.pathname = "/restaurants";
+            return NextResponse.redirect(url);
+        }
+    }
+
     return supabaseResponse;
 }
 

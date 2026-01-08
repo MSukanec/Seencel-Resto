@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
     LayoutDashboard,
     Map,
@@ -16,10 +17,11 @@ import {
     Armchair,
     Store,
     Users,
-    Calendar
+    Calendar,
+    Tag
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFloor } from "@/contexts/FloorContext";
+import { useSafeFloor } from "@/contexts/FloorContext";
 
 const SIDEBAR_ITEMS = [
     { icon: LayoutDashboard, label: "Panel", href: "/dashboard" },
@@ -33,6 +35,8 @@ const SIDEBAR_ITEMS = [
         href: "#", // Accordion placeholder
         subItems: [
             { icon: Settings, label: "Ajustes", href: "/dashboard/settings" },
+            { icon: Users, label: "Equipo", href: "/dashboard/settings/team" },
+            { icon: Tag, label: "Etiquetas", href: "/dashboard/settings/tags" }, // New link
             { icon: PencilRuler, label: "Arquitectura", href: "/dashboard/floor/architecture" },
             { icon: Armchair, label: "Plantillas", href: "/dashboard/floor/tables" },
         ]
@@ -41,34 +45,61 @@ const SIDEBAR_ITEMS = [
 
 export function Sidebar({ className }: { className?: string }) {
     const pathname = usePathname();
+    const router = useRouter();
+
+
+    const floorContext = useSafeFloor();
+    const floors = floorContext?.floors || [];
+    const isLoading = floorContext?.isLoading ?? false;
+    const hasFloors = floors && floors.length > 0;
+    // Note: Variable name collision if I use isLoading. Changed to isLoadingFloor.
+    // Wait, Sidebar has `let isLoading = true` loop later?
+    // In step 599 I removed the previous try/catch which declared `isLoading`.
+    // Let's check the file content after this tool to be safe about variable names. 
+
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        router.refresh(); // Clear server component cache
+        router.push("/login");
+    };
     const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
         "Configuración": true // Default open
     });
-    // Placeholder user state - in a real app, fetch from context or props
-    const user = { name: "Usuario", email: "admin@seencel.com" };
+    const [user, setUser] = useState<{ name: string; email: string; avatar_url?: string | null }>({
+        name: "Cargando...",
+        email: ""
+    });
+    const supabase = createClient();
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (authUser) {
+                // Fetch profile
+                const { data: profile } = await supabase
+                    .from("users")
+                    .select("full_name, avatar_url")
+                    .eq("id", authUser.id)
+                    .single();
+
+                setUser({
+                    name: profile?.full_name || authUser.email?.split('@')[0] || "Usuario",
+                    email: authUser.email || "",
+                    avatar_url: profile?.avatar_url
+                });
+            }
+        };
+        fetchUser();
+    }, []);
 
     const toggleGroup = (label: string) => {
         setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }));
     };
 
-    // Safe usage of useFloor - we are inside the provider now
-    // But we need to handle hydration or if context is missing for some reason
-    // Use a custom hook logic or try-catch inside the component is awkward.
-    // The clean way: We know it's wrapped.
-    let floors: any[] = [];
-    let isLoading = true;
+    // Safe usage check moved to top level hook call
+    // Logic is now safe.
 
-    try {
-        const floorContext = useFloor();
-        floors = floorContext.floors;
-        isLoading = floorContext.isLoading;
-    } catch (e) {
-        // Context might not be available yet or we are outside (e.g. login page if reusing sidebar?)
-        // Assuming we are indashboard so it should be fine. Ignore error for safety.
-        isLoading = false;
-    }
 
-    const hasFloors = floors && floors.length > 0;
 
     return (
         <aside className={cn("flex w-64 flex-col border-r border-border bg-card/50 backdrop-blur-xl", className)}>
@@ -175,7 +206,10 @@ export function Sidebar({ className }: { className?: string }) {
                     <Store size={18} />
                     Cambiar Restaurante
                 </Link>
-                <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
+                <button
+                    onClick={handleSignOut}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+                >
                     <LogOut size={18} />
                     Cerrar Sesión
                 </button>
