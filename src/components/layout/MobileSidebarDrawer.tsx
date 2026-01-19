@@ -1,6 +1,5 @@
 "use client";
 
-import { X } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { SIDEBAR_RESTO } from "./sidebar-config";
 import { useMobileSidebar } from "@/components/providers/MobileSidebarContext";
@@ -26,17 +25,16 @@ export function MobileSidebarDrawer() {
                     isOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
-                {/* Close button */}
-                <button
-                    onClick={close}
-                    className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted text-muted-foreground"
-                >
-                    <X size={20} />
-                </button>
-
-                {/* Sidebar content */}
-                <AppSidebar variant={SIDEBAR_RESTO} className="h-full w-full border-r-0" onNavigate={close} isMobile />
+                {/* Sidebar content with integrated close button */}
+                <AppSidebar
+                    variant={SIDEBAR_RESTO}
+                    className="h-full w-full border-r-0"
+                    onNavigate={close}
+                    isMobile
+                    onClose={close}
+                />
             </div>
         </>
     );
 }
+

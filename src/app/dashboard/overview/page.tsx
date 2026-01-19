@@ -28,7 +28,7 @@ export default function OverviewPage() {
                 title="Panel"
                 subtitle="Resumen en tiempo real"
                 actions={
-                    <div className="flex items-center gap-6 overflow-x-auto no-scrollbar">
+                    <div className="hidden md:flex items-center gap-6 overflow-x-auto no-scrollbar">
                         {stats.map((stat, i) => (
                             <div key={i} className="flex items-center gap-3 shrink-0">
                                 <div className="text-right">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Clock, ChefHat, CheckCircle2, Timer, AlertCircle, Loader2, RefreshCw, Truck, ShoppingBag, UtensilsCrossed, ArrowLeft } from "lucide-react";
+import { Clock, ChefHat, CheckCircle2, Timer, AlertCircle, Loader2, RefreshCw, Truck, ShoppingBag, UtensilsCrossed, ArrowLeft, X, BookOpen } from "lucide-react";
 import { getKitchenOrders, updateOrderItemStatus, checkAndUpdateOrderReadyStatus } from "@/lib/actions/order-actions";
 import { KitchenOrder, KitchenOrderItem } from "@/types/order";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,14 @@ interface Sector {
     name: string;
     color: string | null;
     icon: string | null;
+}
+
+interface RecipeInfo {
+    id: string;
+    name: string;
+    description: string | null;
+    image_url: string | null;
+    recipe: string | null;
 }
 
 const STATUS_CONFIG = {
@@ -52,11 +60,16 @@ const ORDER_TYPE_LABELS = {
 export default function KDSPage() {
     const params = useParams();
     const sectorId = params.sectorId as string;
+    const supabase = createClient();
 
     const [orders, setOrders] = useState<KitchenOrder[]>([]);
     const [sector, setSector] = useState<Sector | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+
+    // Recipe modal state
+    const [selectedRecipe, setSelectedRecipe] = useState<RecipeInfo | null>(null);
+    const [loadingRecipe, setLoadingRecipe] = useState(false);
 
     const getRestaurantId = () => {
         if (typeof document === "undefined") return null;
@@ -69,7 +82,6 @@ export default function KDSPage() {
     // Fetch sector info
     useEffect(() => {
         const fetchSector = async () => {
-            const supabase = createClient();
             const { data } = await supabase
                 .from("kitchen_sectors")
                 .select("id, name, color, icon")
@@ -107,6 +119,32 @@ export default function KDSPage() {
             return () => clearInterval(interval);
         }
     }, [restaurantId, fetchOrders]);
+
+    // Fetch recipe for an item
+    const handleItemClick = async (item: KitchenOrderItem) => {
+        setLoadingRecipe(true);
+
+        // We need to find the menu_item_id from order_items
+        const { data: orderItem } = await supabase
+            .from("order_items")
+            .select("menu_item_id")
+            .eq("id", item.id)
+            .single();
+
+        if (orderItem?.menu_item_id) {
+            const { data: menuItem } = await supabase
+                .from("menu_items")
+                .select("id, name, description, image_url, recipe")
+                .eq("id", orderItem.menu_item_id)
+                .single();
+
+            if (menuItem) {
+                setSelectedRecipe(menuItem);
+            }
+        }
+
+        setLoadingRecipe(false);
+    };
 
     // Group items by status across all orders
     const getOrderStatus = (order: KitchenOrder): "pending" | "preparing" | "ready" => {
@@ -289,19 +327,24 @@ export default function KDSPage() {
                                                     </p>
                                                 )}
 
-                                                {/* Items */}
+                                                {/* Items - Clickable for recipe */}
                                                 <div className="space-y-2 mb-4">
                                                     {order.items.map((item) => (
-                                                        <div key={item.id} className="flex items-start gap-2">
+                                                        <div
+                                                            key={item.id}
+                                                            className="flex items-start gap-2 cursor-pointer hover:bg-background/50 rounded p-1 -mx-1 transition-colors"
+                                                            onClick={() => handleItemClick(item)}
+                                                        >
                                                             <span className="font-medium text-sm bg-background/50 px-1.5 py-0.5 rounded">
                                                                 x{item.quantity}
                                                             </span>
                                                             <div className="flex-1">
-                                                                <p className="text-sm font-medium">
+                                                                <p className="text-lg font-semibold hover:text-primary transition-colors">
                                                                     {item.name}
                                                                     {item.variant && (
-                                                                        <span className="text-muted-foreground font-normal"> ({item.variant})</span>
+                                                                        <span className="text-muted-foreground font-normal text-base"> ({item.variant})</span>
                                                                     )}
+                                                                    <BookOpen size={14} className="inline ml-2 text-muted-foreground" />
                                                                 </p>
                                                                 {item.notes && (
                                                                     <p className="text-xs text-amber-500 font-medium">
@@ -354,6 +397,89 @@ export default function KDSPage() {
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            {/* Recipe Modal */}
+            {(selectedRecipe || loadingRecipe) && (
+                <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-card w-full max-w-lg rounded-2xl overflow-hidden animate-in zoom-in-95 duration-200 border shadow-2xl">
+                        {loadingRecipe ? (
+                            <div className="p-12 flex items-center justify-center">
+                                <Loader2 className="animate-spin text-primary" size={32} />
+                            </div>
+                        ) : selectedRecipe && (
+                            <>
+                                {/* Image */}
+                                {selectedRecipe.image_url ? (
+                                    <div className="h-48 relative">
+                                        <img
+                                            src={selectedRecipe.image_url}
+                                            alt={selectedRecipe.name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
+                                        <button
+                                            onClick={() => setSelectedRecipe(null)}
+                                            className="absolute top-3 right-3 p-2 bg-black/50 rounded-full text-white backdrop-blur-sm"
+                                        >
+                                            <X size={18} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="h-32 bg-muted flex items-center justify-center relative">
+                                        <UtensilsCrossed size={40} className="text-muted-foreground/30" />
+                                        <button
+                                            onClick={() => setSelectedRecipe(null)}
+                                            className="absolute top-3 right-3 p-2 bg-muted-foreground/10 rounded-full"
+                                        >
+                                            <X size={18} />
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Content */}
+                                <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                                    <div>
+                                        <h2 className="text-2xl font-bold flex items-center gap-2">
+                                            <BookOpen size={22} className="text-primary" />
+                                            {selectedRecipe.name}
+                                        </h2>
+                                        {selectedRecipe.description && (
+                                            <p className="text-muted-foreground mt-2">
+                                                {selectedRecipe.description}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {selectedRecipe.recipe ? (
+                                        <div className="border-t pt-4">
+                                            <h3 className="font-semibold mb-3 flex items-center gap-2">
+                                                <ChefHat size={16} className="text-primary" />
+                                                Receta / Preparación
+                                            </h3>
+                                            <div
+                                                className="recipe-content bg-muted/20 rounded-xl p-4 border border-border [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:mt-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:text-base [&_h3]:font-bold [&_h3]:mb-2 [&_h3]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-3 [&_ol]:space-y-1 [&_li]:text-sm [&_p]:text-sm [&_p]:mb-2 [&_blockquote]:border-l-4 [&_blockquote]:border-primary/30 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_strong]:font-bold [&_b]:font-bold"
+                                                dangerouslySetInnerHTML={{ __html: selectedRecipe.recipe }}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="border-t pt-4 text-center text-muted-foreground py-8">
+                                            <ChefHat size={32} className="mx-auto mb-2 opacity-30" />
+                                            <p className="text-sm">No hay receta cargada para este plato.</p>
+                                        </div>
+                                    )}
+
+                                    <button
+                                        onClick={() => setSelectedRecipe(null)}
+                                        className="w-full py-3 bg-muted hover:bg-muted/80 rounded-xl font-medium transition-colors"
+                                    >
+                                        Cerrar
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

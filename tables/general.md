@@ -562,7 +562,8 @@ create table public.restaurant_members (
   role uuid not null,
   is_active boolean not null default true,
   display_name text null,
-  constraint restaurant_members_pkey primary key (restaurant_id, user_id),
+  id uuid not null default gen_random_uuid (),
+  constraint restaurant_members_pkey primary key (id),
   constraint restaurant_members_restaurant_id_fkey foreign KEY (restaurant_id) references restaurants (id) on delete CASCADE,
   constraint restaurant_members_role_fkey foreign KEY (role) references roles (id) on delete RESTRICT,
   constraint restaurant_members_user_id_fkey foreign KEY (user_id) references users (id) on delete CASCADE
@@ -571,6 +572,8 @@ create table public.restaurant_members (
 create index IF not exists idx_restaurant_members_user on public.restaurant_members using btree (user_id) TABLESPACE pg_default;
 
 create index IF not exists idx_restaurant_members_role on public.restaurant_members using btree (role) TABLESPACE pg_default;
+
+create unique INDEX IF not exists uniq_restaurant_member on public.restaurant_members using btree (restaurant_id, user_id) TABLESPACE pg_default;
 
 # Tabla RESTAURANT_SETTINGS:
 

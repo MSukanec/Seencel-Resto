@@ -4,15 +4,19 @@ import { useEffect, useState } from "react";
 import { FloorProvider, FloorManagerModal } from "@/features/floor-plan";
 
 export function GlobalFloorProviderWrapper({ children }: { children: React.ReactNode }) {
-    const [restaurantId, setRestaurantId] = useState<string | null>(null);
+    const [restaurantId, setRestaurantId] = useState<string>("");
+    const [isReady, setIsReady] = useState(false);
 
     useEffect(() => {
         // Poll for cookie changes
         const checkCookie = () => {
             const match = document.cookie.match(new RegExp('(^| )selected_restaurant_id=([^;]+)'));
-            const newId = match ? match[2] : null;
+            const newId = match ? match[2] : "";
             if (newId !== restaurantId) {
                 setRestaurantId(newId);
+            }
+            if (!isReady) {
+                setIsReady(true);
             }
         };
 
@@ -20,20 +24,15 @@ export function GlobalFloorProviderWrapper({ children }: { children: React.React
         const interval = setInterval(checkCookie, 1000); // Poll every second
 
         return () => clearInterval(interval);
-    }, [restaurantId]);
+    }, [restaurantId, isReady]);
 
-    if (!restaurantId) {
-        // Provide context with dummy ID or render null if strictly required?
-        // Rendering children is better so UI doesn't flicker, but Context needs ID.
-        // Let's render children without provider if no ID, or provider with empty ID.
-        // FloorProvider checks "if (restaurantId) refreshFloors()", so passing "" is safe-ish but queries might fail.
-        return <>{children}</>;
-    }
-
+    // Always render FloorProvider to maintain hook consistency
+    // FloorProvider handles empty restaurantId gracefully (won't fetch floors)
     return (
         <FloorProvider restaurantId={restaurantId}>
-            <FloorManagerModal restaurantId={restaurantId} />
+            {restaurantId && <FloorManagerModal restaurantId={restaurantId} />}
             {children}
         </FloorProvider>
     );
 }
+

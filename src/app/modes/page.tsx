@@ -204,7 +204,7 @@ export default function ModesPage() {
             </div>
 
             <div className="flex-1 flex flex-col items-center justify-center w-full px-4 py-24">
-                <div className="w-full max-w-4xl space-y-10">
+                <div className="w-full max-w-6xl space-y-8">
                     <div className="text-center space-y-3 relative z-10">
                         <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">
                             Selecciona tu <span className="text-primary">Modo</span>
@@ -214,111 +214,124 @@ export default function ModesPage() {
                         </p>
                     </div>
 
-                    {/* Standard Roles */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {availableRoles.map((role) => {
-                            const RoleIcon = ROLE_ICONS[role.code] || Store;
-
-                            return (
-                                <button
-                                    key={role.id}
-                                    onClick={() => handleRoleSelect(role)}
-                                    className="relative flex flex-col items-start p-6 rounded-xl border transition-all duration-300 text-left h-full bg-card border-border hover:border-primary/50 hover:shadow-[0_0_20px_-5px_var(--primary)] hover:scale-105 cursor-pointer"
-                                >
-                                    <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                        <RoleIcon size={22} />
-                                    </div>
-                                    <h3 className="text-xl font-bold mb-2">{role.name}</h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        {role.description || "Acceso disponible"}
-                                    </p>
-
-                                    <div className="mt-auto pt-6 w-full flex justify-end">
-                                        <div className="rounded-full bg-primary/10 p-2 text-primary">
-                                            <ArrowRight size={20} />
-                                        </div>
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-
                     {availableRoles.length === 0 && kitchenSectors.length === 0 && (
                         <div className="text-center py-12 text-muted-foreground">
                             No tienes acceso a ningún modo en este restaurante.
                         </div>
                     )}
 
-                    {/* Kitchen Stations Section */}
-                    {kitchenSectors.length > 0 && (
-                        <div className="mt-8 pt-8 border-t border-border">
-                            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                                <ChefHat size={20} className="text-primary" />
-                                Estaciones de Preparación
+                    {/* 3-Column Layout: Roles (2/4) | Sectors (1/4) | Customer (1/4) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
+                        {/* Column 1: Standard Roles - 2x2 Grid (takes 2/4 = half width) */}
+                        <div className="lg:col-span-2 flex flex-col">
+                            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                                Modos de Operación
                             </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {kitchenSectors.map((sector) => {
-                                    const SectorIcon = getIconByName(sector.icon);
+                            <div className="grid grid-cols-2 gap-4 flex-1">
+                                {availableRoles.map((role) => {
+                                    const RoleIcon = ROLE_ICONS[role.code] || Store;
 
                                     return (
                                         <button
-                                            key={sector.id}
-                                            onClick={() => handleSectorSelect(sector)}
-                                            className="flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all"
+                                            key={role.id}
+                                            onClick={() => handleRoleSelect(role)}
+                                            className="relative flex flex-col items-start p-5 rounded-xl border transition-all duration-300 text-left bg-card border-border hover:border-primary/50 hover:shadow-[0_0_20px_-5px_var(--primary)] hover:scale-[1.02] cursor-pointer"
                                         >
-                                            <div
-                                                className="h-12 w-12 rounded-lg flex items-center justify-center"
-                                                style={{
-                                                    backgroundColor: sector.color ? `${sector.color}20` : 'var(--muted)',
-                                                    color: sector.color || undefined
-                                                }}
-                                            >
-                                                <SectorIcon size={22} />
+                                            <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                                <RoleIcon size={20} />
                                             </div>
-                                            <div className="flex-1 text-left">
-                                                <h3 className="font-bold">{sector.name}</h3>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {sector.description || "Ver comandas"}
-                                                </p>
-                                            </div>
-                                            <div
-                                                className="rounded-full p-2"
-                                                style={{
-                                                    backgroundColor: sector.color ? `${sector.color}20` : undefined,
-                                                    color: sector.color || undefined
-                                                }}
-                                            >
-                                                <ArrowRight size={18} />
+                                            <h3 className="text-lg font-bold mb-1">{role.name}</h3>
+                                            <p className="text-xs text-muted-foreground line-clamp-2">
+                                                {role.description || "Acceso disponible"}
+                                            </p>
+
+                                            <div className="mt-auto pt-3 w-full flex justify-end">
+                                                <div className="rounded-full bg-primary/10 p-1.5 text-primary">
+                                                    <ArrowRight size={16} />
+                                                </div>
                                             </div>
                                         </button>
                                     );
                                 })}
                             </div>
                         </div>
-                    )}
 
-                    {/* Customer Mode */}
-                    <div className="mt-8 pt-8 border-t border-border">
-                        <p className="text-sm text-muted-foreground text-center mb-4">
-                            ¿Querés ver cómo ven los clientes tu menú?
-                        </p>
-                        <button
-                            onClick={() => router.push(`/order/${restaurantId}`)}
-                            className="w-full flex items-center gap-4 p-5 rounded-xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all"
-                        >
-                            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg">
-                                <ShoppingBag size={22} />
+                        {/* Column 2: Kitchen Sectors - Stacked vertically (takes 1/4) */}
+                        <div className="lg:col-span-1 flex flex-col">
+                            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                                <ChefHat size={14} />
+                                Estaciones
+                            </h2>
+                            <div className="flex flex-col gap-3 flex-1">
+                                {kitchenSectors.length > 0 ? (
+                                    kitchenSectors.map((sector) => {
+                                        const SectorIcon = getIconByName(sector.icon);
+
+                                        return (
+                                            <button
+                                                key={sector.id}
+                                                onClick={() => handleSectorSelect(sector)}
+                                                className="flex items-center gap-3 p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all flex-1"
+                                            >
+                                                <div
+                                                    className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0"
+                                                    style={{
+                                                        backgroundColor: sector.color ? `${sector.color}20` : 'var(--muted)',
+                                                        color: sector.color || undefined
+                                                    }}
+                                                >
+                                                    <SectorIcon size={18} />
+                                                </div>
+                                                <div className="flex-1 text-left min-w-0">
+                                                    <h3 className="font-semibold text-sm truncate">{sector.name}</h3>
+                                                    <p className="text-xs text-muted-foreground truncate">
+                                                        {sector.description || "Ver comandas"}
+                                                    </p>
+                                                </div>
+                                                <div
+                                                    className="rounded-full p-1.5 shrink-0"
+                                                    style={{
+                                                        backgroundColor: sector.color ? `${sector.color}20` : undefined,
+                                                        color: sector.color || undefined
+                                                    }}
+                                                >
+                                                    <ArrowRight size={14} />
+                                                </div>
+                                            </button>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="p-4 rounded-xl border border-dashed border-border text-center flex-1 flex items-center justify-center">
+                                        <p className="text-xs text-muted-foreground">
+                                            Sin sectores configurados
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex-1 text-left">
-                                <h3 className="text-lg font-bold">Modo Cliente</h3>
-                                <p className="text-sm text-muted-foreground">
+                        </div>
+
+                        {/* Column 3: Customer Mode (takes 1/4) */}
+                        <div className="lg:col-span-1 flex flex-col">
+                            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                                <ShoppingBag size={14} />
+                                Vista Cliente
+                            </h2>
+                            <button
+                                onClick={() => router.push(`/order/${restaurantId}`)}
+                                className="w-full flex flex-col items-center justify-center p-6 rounded-xl border border-dashed border-border hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all flex-1"
+                            >
+                                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg mb-4">
+                                    <ShoppingBag size={24} />
+                                </div>
+                                <h3 className="text-lg font-bold mb-1">Modo Cliente</h3>
+                                <p className="text-xs text-muted-foreground text-center mb-4">
                                     Vista de pedidos para clientes
                                 </p>
-                            </div>
-                            <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-600">
-                                <ArrowRight size={20} />
-                            </div>
-                        </button>
+                                <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-600">
+                                    <ArrowRight size={18} />
+                                </div>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

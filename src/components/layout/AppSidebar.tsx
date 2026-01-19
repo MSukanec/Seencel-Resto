@@ -10,7 +10,8 @@ import {
     LogOut,
     Store,
     RefreshCw,
-    LucideIcon
+    LucideIcon,
+    X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,9 +35,10 @@ interface AppSidebarProps {
     className?: string;
     onNavigate?: () => void;
     isMobile?: boolean;
+    onClose?: () => void;
 }
 
-export function AppSidebar({ variant, className, onNavigate, isMobile = false }: AppSidebarProps) {
+export function AppSidebar({ variant, className, onNavigate, isMobile = false, onClose }: AppSidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
     const supabase = createClient();
@@ -105,13 +107,21 @@ export function AppSidebar({ variant, className, onNavigate, isMobile = false }:
     return (
         <aside className={cn("flex flex-col border-r border-border bg-card/50 backdrop-blur-xl z-40", className || "w-64")}>
             {/* Header with Branding */}
-            <div className="flex h-16 items-center border-b border-border px-6">
+            <div className="flex h-16 items-center justify-between border-b border-border px-6">
                 <div className="flex items-center gap-2 font-bold text-xl">
                     <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg text-white", variant.accentClass)}>
                         <variant.icon size={20} />
                     </div>
                     <span>Seencel<span className={cn("text-primary", variant.accentClass.includes("teal") && "text-teal-500", variant.accentClass.includes("blue") && "text-blue-500")}>{variant.name}</span></span>
                 </div>
+                {isMobile && onClose && (
+                    <button
+                        onClick={onClose}
+                        className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"
+                    >
+                        <X size={22} />
+                    </button>
+                )}
             </div>
             {/* Navigation */}
             <nav className={cn("flex-1 space-y-1 overflow-y-auto", isMobile ? "p-3 space-y-2" : "p-4")}>

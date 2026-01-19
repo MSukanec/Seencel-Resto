@@ -100,8 +100,9 @@ export default function RestaurantsPage() {
 
     const handleRestaurantClick = (org: Organization & { user_role_id: string }) => {
         console.log(`Selected restaurant ${org.name}, User Role ID: ${org.user_role_id}`);
-        setSelectedRestaurant(org);
-        setView('roles');
+        // Set restaurant cookie and redirect to modes page
+        document.cookie = `selected_restaurant_id=${org.id}; path=/; max-age=31536000; SameSite=Lax`;
+        router.push('/modes');
     };
 
     const handleRoleSelect = (roleId: string, roleName: string) => {
