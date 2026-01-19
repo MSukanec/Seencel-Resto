@@ -1,17 +1,24 @@
 "use client";
-// Force rebuild
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2, Tag, Check } from "lucide-react";
+import { Loader2, Tag, Check, User, UtensilsCrossed } from "lucide-react";
 import { AVAILABLE_ICONS } from "@/lib/tag-icons";
 
-interface CreateTagModalProps {
+interface TagModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    editTag?: {
+        id: string;
+        name: string;
+        category: string;
+        color: string;
+        icon: string;
+        applies_to: string[];
+    } | null;
 }
 
 const CATEGORIES = [
@@ -41,53 +48,107 @@ const COLORS = [
     { hex: "#000000", name: "Negro" },
 ];
 
-export function CreateTagModal({ isOpen, onClose, onSuccess }: CreateTagModalProps) {
+const APPLIES_TO_OPTIONS = [
+    { id: "customer", label: "Clientes", icon: User },
+    { id: "menu_item", label: "Comidas", icon: UtensilsCrossed },
+];
+
+export function TagModal({ isOpen, onClose, onSuccess, editTag }: TagModalProps) {
     const [name, setName] = useState("");
     const [category, setCategory] = useState("other");
-    const [color, setColor] = useState(COLORS[7].hex); // Default blue
+    const [color, setColor] = useState(COLORS[7].hex);
     const [selectedIcon, setSelectedIcon] = useState(AVAILABLE_ICONS[0].id);
+    const [appliesTo, setAppliesTo] = useState<string[]>(["customer"]);
     const [loading, setLoading] = useState(false);
     const supabase = createClient();
+
+    const isEditing = !!editTag;
+
+    // Populate form when editing
+    useEffect(() => {
+        if (editTag) {
+            setName(editTag.name);
+            setCategory(editTag.category);
+            setColor(editTag.color);
+            setSelectedIcon(editTag.icon || AVAILABLE_ICONS[0].id);
+            setAppliesTo(editTag.applies_to || ["customer"]);
+        } else {
+            // Reset form for create mode
+            setName("");
+            setCategory("other");
+            setColor(COLORS[7].hex);
+            setSelectedIcon(AVAILABLE_ICONS[0].id);
+            setAppliesTo(["customer"]);
+        }
+    }, [editTag, isOpen]);
+
+    const toggleAppliesTo = (id: string) => {
+        setAppliesTo(prev => {
+            if (prev.includes(id)) {
+                // Don't allow removing the last one
+                if (prev.length === 1) return prev;
+                return prev.filter(x => x !== id);
+            }
+            return [...prev, id];
+        });
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
         try {
-            // Get current restaurant
             const match = document.cookie.match(new RegExp('(^| )selected_restaurant_id=([^;]+)'));
             const restaurantId = match ? match[2] : null;
             if (!restaurantId) throw new Error("No restaurant selected");
 
-            const { error } = await supabase
-                .from("guest_attributes")
-                .insert({
-                    name,
-                    category,
-                    color,
-                    restaurant_id: restaurantId,
-                    icon: selectedIcon
-                });
+            if (isEditing && editTag) {
+                // Update existing
+                const { error } = await supabase
+                    .from("tags")
+                    .update({
+                        name,
+                        category,
+                        color,
+                        icon: selectedIcon,
+                        applies_to: appliesTo
+                    })
+                    .eq("id", editTag.id);
 
-            if (error) throw error;
+                if (error) throw error;
+            } else {
+                // Create new
+                const { error } = await supabase
+                    .from("tags")
+                    .insert({
+                        name,
+                        category,
+                        color,
+                        restaurant_id: restaurantId,
+                        icon: selectedIcon,
+                        applies_to: appliesTo
+                    });
+
+                if (error) throw error;
+            }
 
             onSuccess();
-            // Reset form
-            setName("");
-            setCategory("other");
-            setColor(COLORS[7].hex);
-            setSelectedIcon(AVAILABLE_ICONS[0].id);
             onClose();
         } catch (error) {
             console.error(error);
-            alert("Error al crear etiqueta");
+            alert("Error al guardar etiqueta");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title="Nueva Etiqueta Personalizada">
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            title={isEditing ? "Editar Etiqueta" : "Nueva Etiqueta Personalizada"}
+            icon={Tag}
+        >
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-4">
                     {/* Name */}
@@ -99,10 +160,37 @@ export function CreateTagModal({ isOpen, onClose, onSuccess }: CreateTagModalPro
                                 required
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                placeholder="Ej: Mesa cerca del baño"
+                                placeholder="Ej: Vegano, Sin Gluten"
                                 className="w-full bg-background border border-border rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/50"
                             />
                         </div>
+                    </div>
+
+                    {/* Applies To */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Aplica a</label>
+                        <div className="flex gap-3">
+                            {APPLIES_TO_OPTIONS.map((option) => {
+                                const Icon = option.icon;
+                                const isSelected = appliesTo.includes(option.id);
+                                return (
+                                    <button
+                                        key={option.id}
+                                        type="button"
+                                        onClick={() => toggleAppliesTo(option.id)}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 transition-all ${isSelected
+                                            ? "border-primary bg-primary/10 text-primary"
+                                            : "border-border bg-card text-muted-foreground hover:bg-muted"
+                                            }`}
+                                    >
+                                        <Icon size={18} />
+                                        <span className="font-medium">{option.label}</span>
+                                        {isSelected && <Check size={16} className="ml-1" />}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <p className="text-xs text-muted-foreground">Selecciona al menos uno. Puede aplicar a ambos.</p>
                     </div>
 
                     {/* Category */}
@@ -165,11 +253,14 @@ export function CreateTagModal({ isOpen, onClose, onSuccess }: CreateTagModalPro
                     <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
                         Cancelar
                     </Button>
-                    <Button type="submit" disabled={loading || !name}>
-                        {loading ? <Loader2 className="animate-spin" size={16} /> : "Crear Etiqueta"}
+                    <Button type="submit" disabled={loading || !name || appliesTo.length === 0}>
+                        {loading ? <Loader2 className="animate-spin" size={16} /> : (isEditing ? "Guardar Cambios" : "Crear Etiqueta")}
                     </Button>
                 </div>
             </form>
         </Dialog>
     );
 }
+
+// Keep old export for backwards compatibility
+export { TagModal as CreateTagModal };

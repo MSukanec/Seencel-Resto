@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
     LayoutDashboard,
@@ -18,16 +18,27 @@ import {
     Store,
     Users,
     Calendar,
-    Tag
+    Tag,
+    RefreshCw,
+    FileSpreadsheet,
+    BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useSafeFloor } from "@/contexts/FloorContext";
+import { useSafeFloor } from "@/features/floor-plan";
 
 const SIDEBAR_ITEMS = [
     { icon: LayoutDashboard, label: "Panel", href: "/dashboard" },
     { icon: Calendar, label: "Calendario", href: "/dashboard/calendar" },
     { icon: UtensilsCrossed, label: "Pedidos", href: "/dashboard/orders" },
-    { icon: ChefHat, label: "Menú", href: "/dashboard/menu" },
+    {
+        icon: ChefHat,
+        label: "Menú",
+        href: "#",
+        subItems: [
+            { icon: BookOpen, label: "Editor", href: "/dashboard/menu" },
+            { icon: FileSpreadsheet, label: "Importar", href: "/dashboard/settings/menu-import" },
+        ]
+    },
     { icon: Users, label: "Clientes", href: "/dashboard/customers" },
     {
         icon: Settings,
@@ -62,9 +73,21 @@ export function Sidebar({ className }: { className?: string }) {
         router.refresh(); // Clear server component cache
         router.push("/login");
     };
-    const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-        "Configuración": true // Default open
-    });
+
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const userMenuRef = useRef<HTMLDivElement>(null);
+
+    const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+    // Auto-open accordion based on current route
+    useEffect(() => {
+        const itemWithActiveSubItem = SIDEBAR_ITEMS.find(
+            item => item.subItems?.some(sub => pathname.startsWith(sub.href))
+        );
+        if (itemWithActiveSubItem) {
+            setOpenGroups({ [itemWithActiveSubItem.label]: true });
+        }
+    }, [pathname]);
     const [user, setUser] = useState<{ name: string; email: string; avatar_url?: string | null }>({
         name: "Cargando...",
         email: ""
@@ -93,8 +116,24 @@ export function Sidebar({ className }: { className?: string }) {
     }, []);
 
     const toggleGroup = (label: string) => {
-        setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }));
+        // Only one accordion open at a time
+        setOpenGroups(prev => {
+            const isCurrentlyOpen = prev[label];
+            // Close all, then toggle the clicked one
+            return { [label]: !isCurrentlyOpen };
+        });
     };
+
+    // Close popover on click outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+                setUserMenuOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     // Safe usage check moved to top level hook call
     // Logic is now safe.
@@ -102,7 +141,7 @@ export function Sidebar({ className }: { className?: string }) {
 
 
     return (
-        <aside className={cn("flex w-64 flex-col border-r border-border bg-card/50 backdrop-blur-xl", className)}>
+        <aside className={cn("flex w-64 flex-col border-r border-border bg-card/50 backdrop-blur-xl z-40", className)}>
             <div className="flex h-16 items-center border-b border-border px-6">
                 <div className="flex items-center gap-2 font-bold text-xl">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -117,6 +156,8 @@ export function Sidebar({ className }: { className?: string }) {
                     const isActive = item.href !== "#" && pathname === item.href;
                     const isGroupOpen = openGroups[item.label];
                     const hasSubItems = item.subItems && item.subItems.length > 0;
+                    // Check if any sub-item is currently active
+                    const isSubActive = hasSubItems && item.subItems.some(sub => pathname === sub.href);
 
                     return (
                         <div key={item.label}>
@@ -125,7 +166,7 @@ export function Sidebar({ className }: { className?: string }) {
                                     onClick={() => toggleGroup(item.label)}
                                     className={cn(
                                         "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-white/5",
-                                        isGroupOpen ? "text-primary bg-primary/5" : "text-muted-foreground"
+                                        isSubActive ? "text-primary bg-primary/5" : "text-muted-foreground"
                                     )}
                                 >
                                     <div className="flex items-center gap-3">
@@ -189,30 +230,55 @@ export function Sidebar({ className }: { className?: string }) {
                 })}
             </nav>
 
-            <div className="p-4 border-t border-border space-y-2 bg-background/50">
-                {/* User Profile */}
-                <div className="flex items-center gap-3 px-2 py-2 mb-2 rounded-xl bg-card border border-border/50">
-                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-emerald-500 ring-2 ring-border shrink-0"></div>
-                    <div className="flex-1 min-w-0">
+            {/* User Avatar Footer */}
+            <div className="p-4 border-t border-border bg-background/50 relative" ref={userMenuRef}>
+                <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center gap-3 w-full px-2 py-2 rounded-xl bg-card border border-border/50 hover:border-primary/50 transition-colors"
+                >
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-emerald-500 ring-2 ring-border shrink-0 flex items-center justify-center text-white font-bold text-sm">
+                        {user.avatar_url ? (
+                            <img src={user.avatar_url} alt={user.name} className="h-full w-full rounded-full object-cover" />
+                        ) : (
+                            user.name.charAt(0).toUpperCase()
+                        )}
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
                         <p className="text-sm font-bold truncate text-foreground">{user.name}</p>
                         <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
-                </div>
-
-                <Link
-                    href="/restaurants"
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-primary/10 hover:text-primary text-muted-foreground"
-                >
-                    <Store size={18} />
-                    Cambiar Restaurante
-                </Link>
-                <button
-                    onClick={handleSignOut}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
-                >
-                    <LogOut size={18} />
-                    Cerrar Sesión
                 </button>
+
+                {/* Popover - positioned to the right, bottom aligned */}
+                {userMenuOpen && (
+                    <div className="absolute left-full bottom-0 ml-2 w-56 bg-popover border border-border rounded-xl shadow-xl animate-in fade-in slide-in-from-left-2 duration-150 z-[9999]">
+                        <div className="p-1">
+                            <Link
+                                href="/restaurants"
+                                onClick={() => setUserMenuOpen(false)}
+                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent text-foreground"
+                            >
+                                <RefreshCw size={16} />
+                                Cambiar Modo
+                            </Link>
+                            <Link
+                                href="/restaurants"
+                                onClick={() => setUserMenuOpen(false)}
+                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent text-foreground"
+                            >
+                                <Store size={16} />
+                                Cambiar Restaurante
+                            </Link>
+                            <button
+                                onClick={() => { setUserMenuOpen(false); handleSignOut(); }}
+                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+                            >
+                                <LogOut size={16} />
+                                Cerrar Sesión
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </aside>
     );

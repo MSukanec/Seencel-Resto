@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FloorProvider } from "@/contexts/FloorContext";
-import { FloorManagerModal } from "@/components/floor-plan/FloorManagerModal";
+import { FloorProvider, FloorManagerModal } from "@/features/floor-plan";
 
 export function GlobalFloorProviderWrapper({ children }: { children: React.ReactNode }) {
     const [restaurantId, setRestaurantId] = useState<string | null>(null);

@@ -21,6 +21,8 @@ export interface LayoutTemplateItem {
     shape: string; // 'rectangle', 'circle', 'round'
     seats: number;
     angle: number;
+    seating?: Record<string, { enabled: boolean; type?: string }>;
+    merged_group?: string; // UUID for merged tables
 }
 
 export interface LayoutTemplateItemInsert {
@@ -34,6 +36,8 @@ export interface LayoutTemplateItemInsert {
     shape: string;
     seats: number;
     angle: number;
+    seating?: Record<string, { enabled: boolean; type?: string }>;
+    merged_group?: string; // UUID for merged tables
 }
 
 /**
@@ -205,7 +209,8 @@ export async function applyTemplateToFloor(templateId: string, floorId: string) 
         height: item.height,
         shape: item.shape,
         seats: item.seats,
-        angle: item.angle
+        angle: item.angle,
+        seating: item.seating // Include chair configuration
     }));
 
     // 3. Transactions are not natively supported in Client Library normally,
@@ -236,4 +241,85 @@ export async function applyTemplateToFloor(templateId: string, floorId: string) 
     }
 
     return { error: null };
+}
+
+/**
+ * Duplicate an existing template with a new name
+ * Copies the template and all its items
+ */
+export async function duplicateTemplate(sourceTemplateId: string, newName: string) {
+    const supabase = createClient();
+
+    // 1. Get the source template
+    const { data: sourceTemplate, error: templateError } = await supabase
+        .from("layout_templates")
+        .select("*")
+        .eq("id", sourceTemplateId)
+        .single();
+
+    if (templateError || !sourceTemplate) {
+        console.error("Error fetching source template:", templateError);
+        return { data: null, error: templateError || new Error("Template not found") };
+    }
+
+    // 2. Create new template with the new name
+    const { data: newTemplate, error: createError } = await supabase
+        .from("layout_templates")
+        .insert({
+            restaurant_id: sourceTemplate.restaurant_id,
+            name: newName,
+            description: sourceTemplate.description,
+            is_active: false
+        })
+        .select()
+        .single();
+
+    if (createError || !newTemplate) {
+        console.error("Error creating new template:", createError);
+        return { data: null, error: createError };
+    }
+
+    // 3. Get all items from source template
+    const { data: sourceItems, error: itemsError } = await supabase
+        .from("layout_template_items")
+        .select("*")
+        .eq("template_id", sourceTemplateId);
+
+    if (itemsError) {
+        console.error("Error fetching source items:", itemsError);
+        // Clean up the created template
+        await supabase.from("layout_templates").delete().eq("id", newTemplate.id);
+        return { data: null, error: itemsError };
+    }
+
+    // 4. Copy items to new template
+    if (sourceItems && sourceItems.length > 0) {
+        const newItems = sourceItems.map(item => ({
+            template_id: newTemplate.id,
+            floor_id: item.floor_id,
+            label: item.label,
+            x: item.x,
+            y: item.y,
+            width: item.width,
+            height: item.height,
+            shape: item.shape,
+            seats: item.seats,
+            angle: item.angle,
+            seating: item.seating,
+            merged_group: item.merged_group
+        }));
+
+        const { error: insertError } = await supabase
+            .from("layout_template_items")
+            .insert(newItems);
+
+        if (insertError) {
+            console.error("Error copying template items:", insertError);
+            // Clean up
+            await supabase.from("layout_templates").delete().eq("id", newTemplate.id);
+            return { data: null, error: insertError };
+        }
+    }
+
+    return { data: newTemplate as LayoutTemplate, error: null };
 }

@@ -1,4 +1,4 @@
-import { FloorObject, WallAlignment } from "../components/floor-plan/Canvas";
+import { FloorObject, WallAlignment } from "@/features/floor-plan/core/Canvas";
 
 /**
  * Calculates distance between two points

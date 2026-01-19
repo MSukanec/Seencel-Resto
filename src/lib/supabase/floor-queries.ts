@@ -4,8 +4,8 @@ export interface Floor {
     id: string;
     restaurant_id: string;
     name: string;
-    width: number;
-    height: number;
+    position: number;
+    is_active: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -13,20 +13,26 @@ export interface Floor {
 export interface FloorInsert {
     restaurant_id: string;
     name: string;
-    width?: number;
-    height?: number;
+    position?: number;
+    is_active?: boolean;
 }
 
 /**
- * Get all floors for a restaurant
+ * Get all ACTIVE floors for a restaurant, ordered by position
  */
-export async function getFloorsForRestaurant(restaurantId: string) {
+export async function getFloorsForRestaurant(restaurantId: string, includeInactive = false) {
     const supabase = createClient();
-    const { data, error } = await supabase
+    let query = supabase
         .from("floors")
         .select("*")
         .eq("restaurant_id", restaurantId)
-        .order("created_at", { ascending: true });
+        .order("position", { ascending: true });
+
+    if (!includeInactive) {
+        query = query.eq("is_active", true);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error("Error fetching floors:", error);

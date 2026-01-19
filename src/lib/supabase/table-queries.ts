@@ -11,19 +11,20 @@ export interface Table {
     shape: "rectangle" | "circle" | "square";
     seats: number;
     angle: number;
+    seating?: Record<string, { enabled: boolean; type?: string }>;
     created_at?: string;
     updated_at?: string;
     // Service State
-    status?: "available" | "occupied" | "reserved" | "dirty";
+    status?: "available" | "occupied" | "reserved" | "blocked";
     current_pax?: number;
-    customer_id?: string;
+    current_session_id?: string;
     opened_at?: string;
 }
 
 export interface TableUpdatePayload {
-    status?: "available" | "occupied" | "reserved" | "dirty";
+    status?: "available" | "occupied" | "reserved" | "blocked";
     current_pax?: number;
-    customer_id?: string | null;
+    current_session_id?: string | null;
     opened_at?: string | null;
 }
 
@@ -38,6 +39,7 @@ export interface TableInsert {
     shape: "rectangle" | "circle" | "square";
     seats: number;
     angle: number;
+    seating?: Record<string, { enabled: boolean; type?: string }>;
 }
 
 /**
@@ -47,7 +49,7 @@ export async function getTables(floorId: string) {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from("tables")
-        .select("*, customers(first_name, last_name)")
+        .select("*")
         .eq("floor_id", floorId);
 
     if (error) {

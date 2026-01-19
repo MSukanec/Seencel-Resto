@@ -16,23 +16,29 @@ export interface Customer {
     email?: string;
     observations?: string;
     address_raw?: string;
+    address_floor?: string;
+    address_apartment?: string;
+    delivery_notes?: string;
     latitude?: number;
     longitude?: number;
     google_place_id?: string;
     created_at?: string;
     tags?: Tag[];
     // Helper to map the nested structure from Supabase
-    customer_tags?: { guest_attributes: Tag }[];
+    customer_tags?: { customer_attributes: Tag }[];
 }
 
 export async function getCustomers(restaurantId: string) {
     const supabase = createClient();
+
+    // Try with nested join for tags via customer_tags -> tags
     const { data, error } = await supabase
         .from("customers")
         .select(`
             *,
             customer_tags (
-                guest_attributes (
+                tag_id,
+                tags:tag_id (
                     id,
                     name,
                     icon,
@@ -41,14 +47,33 @@ export async function getCustomers(restaurantId: string) {
             )
         `)
         .eq("restaurant_id", restaurantId)
+        .eq("is_active", true)
         .order("created_at", { ascending: false });
 
-    if (error) return { data: null, error };
+    // If nested query fails, fallback to basic query without tags
+    if (error) {
+        console.warn("Nested query failed, falling back to basic customer query:", error.message);
+        const { data: basicData, error: basicError } = await supabase
+            .from("customers")
+            .select("*")
+            .eq("restaurant_id", restaurantId)
+            .eq("is_active", true)
+            .order("created_at", { ascending: false });
+
+        if (basicError) return { data: null, error: basicError };
+
+        // Return customers without tags
+        const customersWithoutTags = (basicData || []).map((c: any) => ({
+            ...c,
+            tags: []
+        }));
+        return { data: customersWithoutTags, error: null };
+    }
 
     // Flatten tags for easier consumption
     const customersWithTags = data.map((c: any) => ({
         ...c,
-        tags: c.customer_tags?.map((ct: any) => ct.guest_attributes) || []
+        tags: c.customer_tags?.map((ct: any) => ct.tags).filter(Boolean) || []
     }));
 
     return { data: customersWithTags, error: null };
@@ -74,27 +99,30 @@ export async function deleteCustomer(id: string) {
         .eq("id", id);
 }
 
-export async function assignCustomerTag(customerId: string, attributeId: string) {
+export async function assignCustomerTag(customerId: string, tagId: string) {
     const supabase = createClient();
     return await supabase
         .from("customer_tags")
-        .insert({ customer_id: customerId, attribute_id: attributeId });
+        .insert({ customer_id: customerId, tag_id: tagId });
 }
 
-export async function removeCustomerTag(customerId: string, attributeId: string) {
+export async function removeCustomerTag(customerId: string, tagId: string) {
     const supabase = createClient();
     return await supabase
         .from("customer_tags")
         .delete()
-        .match({ customer_id: customerId, attribute_id: attributeId });
+        .match({ customer_id: customerId, tag_id: tagId });
 }
 
 export async function getRestaurantTags(restaurantId: string) {
     const supabase = createClient();
-    return await supabase
-        .from("guest_attributes")
+    // Use tags table, filter for tags that apply to customers
+    const { data, error } = await supabase
+        .from("tags")
         .select("*")
         .or(`restaurant_id.is.null,restaurant_id.eq.${restaurantId}`)
-        .eq("is_active", true)
+        .contains("applies_to", ["customer"])
         .order("name");
+
+    return { data, error };
 }

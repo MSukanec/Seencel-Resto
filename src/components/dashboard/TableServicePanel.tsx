@@ -158,6 +158,14 @@ export function TableServicePanel({ table, onUpdate, restaurantId }: TableServic
                         </div>
                     </div>
 
+                    {/* Tomar Pedido Button */}
+                    <a
+                        href={`/dashboard/waiter/order/${table.id}`}
+                        className="w-full bg-primary text-primary-foreground h-11 rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                    >
+                        <Plus size={16} /> Tomar Pedido
+                    </a>
+
                     <button
                         onClick={async () => {
                             if (!confirm("¿Cerrar esta mesa? Esto finalizará la sesión actual.")) return;

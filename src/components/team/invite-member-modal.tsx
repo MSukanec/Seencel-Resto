@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2, Mail, Shield, AlertCircle, CheckCircle2, UserPlus } from "lucide-react";
-import { inviteMemberAction } from "@/app/actions/team-actions";
+import { Loader2, Mail, Shield, AlertCircle, UserPlus, User } from "lucide-react";
+import { inviteMemberAction } from "@/lib/actions/team-actions";
 
 interface InviteMemberModalProps {
     isOpen: boolean;
@@ -17,10 +17,12 @@ interface Role {
     id: string;
     name: string;
     description: string;
+    position: number;
 }
 
 export function InviteMemberModal({ isOpen, onClose, onSuccess }: InviteMemberModalProps) {
     const [email, setEmail] = useState("");
+    const [displayName, setDisplayName] = useState("");
     const [selectedRole, setSelectedRole] = useState("");
     const [roles, setRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(false);
@@ -32,7 +34,7 @@ export function InviteMemberModal({ isOpen, onClose, onSuccess }: InviteMemberMo
     }, []);
 
     const fetchRoles = async () => {
-        const { data } = await supabase.from("roles").select("*").order("name");
+        const { data } = await supabase.from("roles").select("*").order("position");
         if (data) {
             setRoles(data);
             if (data.length > 0) setSelectedRole(data[0].id);
@@ -50,8 +52,8 @@ export function InviteMemberModal({ isOpen, onClose, onSuccess }: InviteMemberMo
             const restaurantId = match ? match[2] : null;
             if (!restaurantId) throw new Error("No se seleccionó restaurante");
 
-            // 2. Call Server Action
-            const result = await inviteMemberAction(email, selectedRole, restaurantId);
+            // 2. Call Server Action with display_name
+            const result = await inviteMemberAction(email, selectedRole, restaurantId, displayName.trim());
 
             if (!result.success) {
                 throw new Error(result.message);
@@ -59,6 +61,7 @@ export function InviteMemberModal({ isOpen, onClose, onSuccess }: InviteMemberMo
 
             onSuccess();
             setEmail("");
+            setDisplayName("");
         } catch (err: any) {
             console.error(err);
             setError(err.message || "Error al invitar miembro");
@@ -68,11 +71,29 @@ export function InviteMemberModal({ isOpen, onClose, onSuccess }: InviteMemberMo
     };
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title="Invitar Nuevo Miembro">
+        <Dialog isOpen={isOpen} onClose={onClose} title="Invitar Nuevo Miembro" icon={UserPlus}>
             <form onSubmit={handleInvite} className="space-y-6">
                 <div className="space-y-4">
+                    {/* Display Name - Required */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">Correo Electrónico</label>
+                        <label className="text-sm font-medium text-foreground">Nombre para Mostrar *</label>
+                        <div className="relative">
+                            <User className="absolute left-3 top-2.5 text-muted-foreground" size={18} />
+                            <input
+                                required
+                                type="text"
+                                value={displayName}
+                                onChange={(e) => setDisplayName(e.target.value)}
+                                placeholder="Juan Pérez"
+                                className="w-full bg-background border border-border rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            />
+                        </div>
+                        <p className="text-xs text-muted-foreground">Cómo aparecerá este miembro en tu restaurante.</p>
+                    </div>
+
+                    {/* Email */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Correo Electrónico *</label>
                         <div className="relative">
                             <Mail className="absolute left-3 top-2.5 text-muted-foreground" size={18} />
                             <input
@@ -87,8 +108,9 @@ export function InviteMemberModal({ isOpen, onClose, onSuccess }: InviteMemberMo
                         <p className="text-xs text-muted-foreground">El usuario debe estar registrado en Seencel.</p>
                     </div>
 
+                    {/* Role Selection */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">Rol Asignado</label>
+                        <label className="text-sm font-medium text-foreground">Rol Asignado *</label>
                         <div className="relative">
                             <Shield className="absolute left-3 top-2.5 text-muted-foreground" size={18} />
                             <select
@@ -117,7 +139,7 @@ export function InviteMemberModal({ isOpen, onClose, onSuccess }: InviteMemberMo
                     <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
                         Cancelar
                     </Button>
-                    <Button type="submit" disabled={loading || !email || !selectedRole}>
+                    <Button type="submit" disabled={loading || !email || !selectedRole || !displayName.trim()}>
                         {loading ? <Loader2 className="animate-spin" size={16} /> : <UserPlus size={16} className="mr-2" />}
                         {loading ? "Invitando..." : "Enviar Invitación"}
                     </Button>

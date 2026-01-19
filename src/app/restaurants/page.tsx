@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Store, ArrowRight, Loader2, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Store, ArrowRight, Loader2, Trash2, AlertTriangle, ChefHat, ClipboardList } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { CreateRestaurantModal } from "@/components/create-restaurant-modal";
 import { Dialog } from "@/components/ui/dialog";
@@ -104,20 +104,27 @@ export default function RestaurantsPage() {
         setView('roles');
     };
 
-    const handleRoleSelect = (roleId: string) => {
+    const handleRoleSelect = (roleId: string, roleName: string) => {
         if (!selectedRestaurant) return;
 
-        // Check if the user has this role
-        if (selectedRestaurant.user_role_id !== roleId) {
-            // Logic for owner having all roles could go here, but for now strict check
-            return;
-        }
+        console.log(`Entering as role ${roleId} (${roleName})`);
 
-        console.log(`Entering as role ${roleId}`);
-        // Set cookie and redirect
-        // We could also store the selected_role_id in a cookie if needed by the backend/middleware
+        // Set cookies for restaurant and role
         document.cookie = `selected_restaurant_id=${selectedRestaurant.id}; path=/; max-age=31536000; SameSite=Lax`;
-        router.push("/dashboard");
+        document.cookie = `selected_role=${roleName}; path=/; max-age=31536000; SameSite=Lax`;
+
+        // Route based on role name
+        const roleRoutes: Record<string, string> = {
+            "Propietario": "/dashboard",
+            "Mozo": "/waiter",
+            "Cocinero": "/cocina",
+            "Encargado": "/dashboard",
+            "Bartender": "/dashboard",
+            "Repartidor": "/dashboard",
+        };
+
+        const targetRoute = roleRoutes[roleName] || "/dashboard";
+        router.push(targetRoute);
     };
 
     const handleBackToRestaurants = () => {
@@ -268,38 +275,43 @@ export default function RestaurantsPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
                                 {roles.map((role) => {
-                                    const isUnlocked = selectedRestaurant.user_role_id === role.id;
+                                    const isUserRole = selectedRestaurant.user_role_id === role.id;
+
+                                    // Role-specific icons
+                                    const roleIcons: Record<string, any> = {
+                                        "Propietario": Store,
+                                        "Mozo": ClipboardList,
+                                        "Cocinero": ChefHat,
+                                        "Encargado": Store,
+                                        "Bartender": Store,
+                                        "Repartidor": Store,
+                                    };
+                                    const RoleIcon = roleIcons[role.name] || Store;
 
                                     return (
                                         <button
                                             key={role.id}
-                                            onClick={() => handleRoleSelect(role.id)}
-                                            disabled={!isUnlocked}
+                                            onClick={() => handleRoleSelect(role.id, role.name)}
                                             className={`
                                                 relative flex flex-col items-start p-6 rounded-xl border transition-all duration-300 text-left h-full
-                                                ${isUnlocked
-                                                    ? "bg-card border-primary/50 shadow-[0_0_20px_-5px_var(--primary)] hover:scale-105 cursor-pointer"
-                                                    : "bg-muted/10 border-white/5 opacity-50 cursor-not-allowed grayscale"
-                                                }
+                                                bg-card border-border hover:border-primary/50 hover:shadow-[0_0_20px_-5px_var(--primary)] hover:scale-105 cursor-pointer
+                                                ${isUserRole ? "ring-2 ring-primary/50" : ""}
                                             `}
                                         >
                                             <div className={`
                                                 mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg 
-                                                ${isUnlocked ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}
+                                                ${isUserRole ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}
                                             `}>
-                                                {/* You could map icons based on role code here */}
-                                                <Store size={22} />
+                                                <RoleIcon size={22} />
                                             </div>
                                             <h3 className="text-xl font-bold mb-2">{role.name}</h3>
                                             <p className="text-sm text-muted-foreground">{role.description || "Sin descripción"}</p>
 
-                                            {isUnlocked && (
-                                                <div className="mt-auto pt-6 w-full flex justify-end">
-                                                    <div className="rounded-full bg-primary/10 p-2 text-primary">
-                                                        <ArrowRight size={20} />
-                                                    </div>
+                                            <div className="mt-auto pt-6 w-full flex justify-end">
+                                                <div className="rounded-full bg-primary/10 p-2 text-primary">
+                                                    <ArrowRight size={20} />
                                                 </div>
-                                            )}
+                                            </div>
                                         </button>
                                     );
                                 })}

@@ -86,7 +86,7 @@ export default function Home() {
             {/* Feature Teaser */}
             <div className="mt-20 grid w-full max-w-5xl grid-cols-1 gap-8 sm:grid-cols-3">
               {[
-                { icon: LayoutDashboard, title: "Panel del Dueño", desc: "Métricas en tiempo real y ventas de un vistazo." },
+                { icon: LayoutDashboard, title: "Panel del Propietario", desc: "Métricas en tiempo real y ventas de un vistazo." },
                 { icon: Smartphone, title: "App del Mozo", desc: "Experiencia móvil para tomar pedidos rápidamente." },
                 { icon: ChefHat, title: "Pantalla de Cocina", desc: "Tickets digitales para agilizar el flujo de tu cocina." }
               ].map((feature, i) => (

@@ -33,12 +33,12 @@ export async function openTableSession({ tableId, restaurantId, customerId, pax 
     }
 
     // 2. Update Table Status (Current State)
+    // Note: customer_id lives in sessions table, not tables
     const { error: tableError } = await supabase
         .from("tables")
         .update({
             status: "occupied",
             current_pax: pax,
-            customer_id: customerId,
             current_session_id: session.id, // Link to the history record
             opened_at: new Date().toISOString()
         })
@@ -86,7 +86,6 @@ export async function closeTableSession(tableId: string) {
         .update({
             status: "available",
             current_pax: null,
-            customer_id: null,
             current_session_id: null,
             opened_at: null
         })

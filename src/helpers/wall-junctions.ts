@@ -1,4 +1,4 @@
-import { FloorObject } from "@/components/floor-plan/Canvas";
+import { FloorObject } from "@/features/floor-plan";
 import { getWallEndpoints } from "./wall-math";
 
 interface JoinProps {

@@ -49,9 +49,9 @@
   --popover: 0 0% 100%;
   --popover-foreground: 25 10% 20%;
 
-  /* Primary: Vibrant Burger Orange/Red */
-  --primary: 15 85% 55%;
-  /* #E85D26 - Energetic Orange */
+  /* Primary: #f05526 Orange */
+  --primary: 14 88% 55%;
+  /* #f05526 */
   --primary-foreground: 0 0% 100%;
 
   /* Secondary: Soft brown/beige */
@@ -95,4 +95,14 @@
 
 .glass-hover {
   @apply hover:bg-white/90 hover:border-primary/20 transition-all duration-300;
+}
+
+/* Hide scrollbar utility */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
